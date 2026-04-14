@@ -43,4 +43,8 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+## Claude ##
 .superpowers/
+combined.log
+errors.log
+docs/
