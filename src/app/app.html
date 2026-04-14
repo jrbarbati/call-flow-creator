@@ -1,0 +1,15 @@
+<div class="app-shell">
+  <header class="app-header">
+    <span class="app-logo">◈</span>
+    <span class="app-title">Call Flow Creator</span>
+    <span class="header-spacer"></span>
+    <button class="theme-toggle" (click)="themeService.toggle()" title="Toggle theme">
+      {{ themeService.theme() === 'dark' ? '☀' : '☾' }}
+    </button>
+  </header>
+  <main class="app-main">
+    <app-graph-editor
+      [graph]="graph()"
+      (graphChange)="onGraphChange($event)" />
+  </main>
+</div>

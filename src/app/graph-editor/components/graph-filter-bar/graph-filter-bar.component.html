@@ -1,0 +1,103 @@
+<div class="filter-bar">
+  <div class="filter-bar-toggle">
+    <button class="filter-toggle-btn" (click)="toggleExpanded()">
+      <span class="filter-toggle-icon">&#x25BC;</span>
+      <span>Filters</span>
+      @if (activeFilterCount() > 0) {
+        <span class="filter-badge">{{ activeFilterCount() }}</span>
+      }
+    </button>
+    @if (service.isFilterActive()) {
+      <button class="filter-clear-btn" (click)="clearAll()">Clear</button>
+    }
+  </div>
+
+  @if (isExpanded) {
+    <div class="filter-bar-content">
+      @for (config of filterConfigs; track config.type) {
+        <div class="filter-group">
+          <label class="filter-group-label">{{ config.label }}</label>
+
+          <!-- Autocomplete input -->
+          <div class="filter-input-wrap">
+            <input class="filter-input"
+                   type="text"
+                   [placeholder]="'Search ' + config.label + '...'"
+                   [ngModel]="searchText[config.type] ?? ''"
+                   (ngModelChange)="searchText[config.type] = $event"
+                   (focus)="openDropdown(config.type)"
+                   (blur)="closeDropdown(config.type)" />
+
+            @if (showDropdown[config.type]) {
+              <div class="filter-dropdown">
+                @for (node of getFilteredNodes(config.type); track node.id) {
+                  <div class="filter-option"
+                       [class.is-selected]="isNodeSelected(config.type, node.id)"
+                       (mousedown)="toggleNode(config.type, node.id)">
+                    <span class="option-check">{{ isNodeSelected(config.type, node.id) ? '✓' : '' }}</span>
+                    <span class="option-label">{{ node.label }}</span>
+                  </div>
+                } @empty {
+                  <div class="filter-option filter-empty">No matches</div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Selected chips -->
+          @if (getSelectedIds(config.type).length > 0) {
+            <div class="filter-chips">
+              @for (id of getSelectedIds(config.type); track id) {
+                <span class="filter-chip">
+                  {{ getNodeLabel(id) }}
+                  <button class="chip-remove" (click)="removeNode(config.type, id)">&times;</button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Department filter -->
+      <div class="filter-group">
+        <label class="filter-group-label">Department</label>
+
+        <div class="filter-input-wrap">
+          <input class="filter-input"
+                 type="text"
+                 placeholder="Search Department..."
+                 [(ngModel)]="departmentSearch"
+                 (focus)="openDeptDropdown()"
+                 (blur)="closeDeptDropdown()" />
+
+          @if (showDeptDropdown) {
+            <div class="filter-dropdown">
+              @for (dept of filteredDepartments(); track dept) {
+                <div class="filter-option"
+                     [class.is-selected]="isDeptSelected(dept)"
+                     (mousedown)="toggleDepartment(dept)">
+                  <span class="option-check">{{ isDeptSelected(dept) ? '✓' : '' }}</span>
+                  <span class="option-label">{{ dept }}</span>
+                </div>
+              } @empty {
+                <div class="filter-option filter-empty">No departments</div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Selected department chips -->
+        @if (service.filterByDepartment().length > 0) {
+          <div class="filter-chips">
+            @for (dept of service.filterByDepartment(); track dept) {
+              <span class="filter-chip">
+                {{ dept }}
+                <button class="chip-remove" (click)="removeDepartment(dept)">&times;</button>
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

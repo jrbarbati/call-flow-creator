@@ -1,0 +1,17 @@
+// Re-exports design tokens for use within graph editor components.
+// Components import this file for token access and shared mixins.
+
+@mixin node-action-icon {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .graph-node:hover & {
+    opacity: 1;
+  }
+}
+
+@mixin focus-ring {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

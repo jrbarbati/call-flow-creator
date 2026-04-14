@@ -1,0 +1,36 @@
+<aside class="palette">
+  <!-- Components section -->
+  <div class="palette-section">
+    <div class="palette-section-header">
+      <span class="palette-header-text">3CX ASSETS</span>
+    </div>
+    <div class="palette-items">
+      @for (item of componentTypes; track item.type) {
+        <div class="palette-item component-item"
+             [attr.data-type]="item.type"
+             draggable="true"
+             (dragstart)="onComponentDragStart($event, item.type)">
+          <span class="palette-color-dot" [style.background]="item.color"></span>
+          <span class="palette-item-label">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Extensions section -->
+  <div class="palette-section extensions-section">
+    <div class="palette-section-header">
+      <span class="palette-header-text">EXTENSIONS</span>
+    </div>
+    <div class="palette-items extension-list">
+      @for (ext of extensions; track ext.number) {
+        <div class="palette-item extension-item"
+             draggable="true"
+             (dragstart)="onExtensionDragStart($event, ext)">
+          <span class="extension-number">{{ ext.number }}</span>
+          <span class="palette-item-label">{{ ext.firstName }} {{ ext.lastName }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</aside>

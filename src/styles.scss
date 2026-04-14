@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600&display=swap');
+
+// Dark theme (default)
+:root[data-theme="dark"] {
+  // Canvas
+  --canvas-bg: #16181D;
+  --canvas-dot: rgba(255, 255, 255, 0.06);
+  --canvas-dot-size: 24px;
+
+  // Node
+  --node-bg: #1E2028;
+  --node-bg-hover: #24262F;
+  --node-border: rgba(255, 255, 255, 0.08);
+  --node-border-hover: rgba(255, 255, 255, 0.16);
+  --node-border-selected: #F59E0B;
+  --node-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --node-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --node-shadow-selected: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --node-label-color: #E8EAF0;
+  --node-label-font: 'JetBrains Mono', monospace;
+  --node-radius: 8px;
+
+  // Edge
+  --edge-color: rgba(255, 255, 255, 0.2);
+  --edge-color-hover: rgba(255, 255, 255, 0.4);
+  --edge-color-selected: #F59E0B;
+  --edge-width: 1.5;
+  --edge-selected-width: 2;
+
+  // Port
+  --port-color: #F59E0B;
+  --port-border: #16181D;
+
+  // Selection rect
+  --selection-fill: rgba(245, 158, 11, 0.05);
+  --selection-stroke: rgba(245, 158, 11, 0.5);
+
+  // Palette
+  --palette-bg: #0F1117;
+  --palette-border: rgba(255, 255, 255, 0.06);
+  --palette-width: 180px;
+  --palette-item-bg: #1E2028;
+  --palette-item-bg-hover: #24262F;
+  --palette-item-border: rgba(255, 255, 255, 0.08);
+  --palette-item-border-hover: rgba(245, 158, 11, 0.4);
+  --palette-label: rgba(255, 255, 255, 0.4);
+  --palette-label-font: 'Outfit', sans-serif;
+
+  // Header
+  --header-bg: #0F1117;
+  --header-border: rgba(255, 255, 255, 0.06);
+  --header-text: rgba(255, 255, 255, 0.85);
+
+  // Accent
+  --accent: #F59E0B;
+  --accent-dim: rgba(245, 158, 11, 0.15);
+
+  // Zoom controls
+  --zoom-bg: #1E2028;
+  --zoom-border: rgba(255, 255, 255, 0.08);
+  --zoom-text: rgba(255, 255, 255, 0.6);
+  --zoom-text-hover: rgba(255, 255, 255, 0.9);
+
+  // Action icons
+  --action-edit-bg: rgba(30, 32, 40, 0.9);
+  --action-delete-bg: rgba(30, 32, 40, 0.9);
+  --action-delete-hover: rgba(239, 68, 68, 0.15);
+  --action-icon: rgba(255, 255, 255, 0.5);
+  --action-icon-hover: rgba(255, 255, 255, 0.9);
+  --action-delete-icon-hover: #EF4444;
+
+  // Live edge (drawing in progress)
+  --live-edge-color: rgba(245, 158, 11, 0.6);
+
+  // Inline edit input
+  --edit-input-bg: #16181D;
+  --edit-input-border: #F59E0B;
+  --edit-input-text: #E8EAF0;
+}
+
+// Light theme
+:root[data-theme="light"] {
+  // Canvas
+  --canvas-bg: #F0F1F5;
+  --canvas-dot: rgba(0, 0, 0, 0.08);
+  --canvas-dot-size: 24px;
+
+  // Node
+  --node-bg: #FFFFFF;
+  --node-bg-hover: #F5F5F7;
+  --node-border: rgba(0, 0, 0, 0.12);
+  --node-border-hover: rgba(0, 0, 0, 0.2);
+  --node-border-selected: #F59E0B;
+  --node-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --node-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --node-shadow-selected: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 4px 16px rgba(0, 0, 0, 0.12);
+  --node-label-color: #1A1C22;
+  --node-label-font: 'JetBrains Mono', monospace;
+  --node-radius: 8px;
+
+  // Edge
+  --edge-color: rgba(0, 0, 0, 0.25);
+  --edge-color-hover: rgba(0, 0, 0, 0.45);
+  --edge-color-selected: #F59E0B;
+  --edge-width: 1.5;
+  --edge-selected-width: 2;
+
+  // Port
+  --port-color: #F59E0B;
+  --port-border: #F0F1F5;
+
+  // Selection rect
+  --selection-fill: rgba(245, 158, 11, 0.08);
+  --selection-stroke: rgba(245, 158, 11, 0.5);
+
+  // Palette
+  --palette-bg: #E8E9ED;
+  --palette-border: rgba(0, 0, 0, 0.08);
+  --palette-width: 180px;
+  --palette-item-bg: #FFFFFF;
+  --palette-item-bg-hover: #F5F5F7;
+  --palette-item-border: rgba(0, 0, 0, 0.1);
+  --palette-item-border-hover: rgba(245, 158, 11, 0.4);
+  --palette-label: rgba(0, 0, 0, 0.5);
+  --palette-label-font: 'Outfit', sans-serif;
+
+  // Header
+  --header-bg: #E8E9ED;
+  --header-border: rgba(0, 0, 0, 0.08);
+  --header-text: #1A1C22;
+
+  // Accent
+  --accent: #F59E0B;
+  --accent-dim: rgba(245, 158, 11, 0.15);
+
+  // Zoom controls
+  --zoom-bg: #FFFFFF;
+  --zoom-border: rgba(0, 0, 0, 0.1);
+  --zoom-text: rgba(0, 0, 0, 0.5);
+  --zoom-text-hover: rgba(0, 0, 0, 0.8);
+
+  // Action icons
+  --action-edit-bg: rgba(255, 255, 255, 0.9);
+  --action-delete-bg: rgba(255, 255, 255, 0.9);
+  --action-delete-hover: rgba(239, 68, 68, 0.15);
+  --action-icon: rgba(0, 0, 0, 0.5);
+  --action-icon-hover: rgba(0, 0, 0, 0.9);
+  --action-delete-icon-hover: #EF4444;
+
+  // Live edge (drawing in progress)
+  --live-edge-color: rgba(245, 158, 11, 0.7);
+
+  // Inline edit input
+  --edit-input-bg: #FFFFFF;
+  --edit-input-border: #F59E0B;
+  --edit-input-text: #1A1C22;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Outfit', sans-serif; background: var(--canvas-bg); color: var(--header-text); }

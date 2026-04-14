@@ -1,0 +1,112 @@
+<svg:g class="graph-node"
+   [class.is-dimmed]="isDimmed()"
+   [attr.transform]="transform"
+   (mouseenter)="onMouseEnter()"
+   (mouseleave)="onMouseLeave()"
+   (mousedown)="onNodeMouseDown($event)"
+   (mouseup)="onNodeMouseUp($event)">
+
+  <!-- Node body -->
+  <svg:rect class="node-rect"
+        [class.is-selected]="isSelected()"
+        [class.is-hovered]="isHovered && !isSelected()"
+        x="0" y="0"
+        [attr.width]="node.width"
+        [attr.height]="node.height"
+        rx="8" ry="8" />
+
+  <!-- Color band (left edge) -->
+  <svg:clipPath [attr.id]="'band-clip-' + node.id">
+    <svg:rect x="0" y="0" width="5" [attr.height]="node.height" rx="8" ry="8" />
+  </svg:clipPath>
+  <svg:rect [attr.clip-path]="'url(#band-clip-' + node.id + ')'"
+        x="0" y="0"
+        width="5"
+        [attr.height]="node.height"
+        [attr.fill]="typeConfig.color"
+        class="node-color-band" />
+
+  <!-- Type icon -->
+  <svg:g [attr.transform]="'translate(12, ' + (node.height / 2 - 7) + ')'">
+    <svg:path [attr.d]="typeConfig.iconPath"
+              class="node-type-icon"
+              [attr.stroke]="typeConfig.color"
+              fill="none"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round" />
+  </svg:g>
+
+  <!-- Label (text mode) -->
+  @if (!isEditing) {
+    <svg:text class="node-label"
+          [attr.x]="32"
+          [attr.y]="typeConfig.hasExtensionNumber ? node.height / 2 - 6 : node.height / 2 + 1"
+          dominant-baseline="middle"
+          text-anchor="start">
+      {{ node.label }}
+    </svg:text>
+
+    @if (typeConfig.hasExtensionNumber && node.meta?.['extensionNumber']) {
+      <svg:text class="node-subtitle"
+            [attr.x]="32"
+            [attr.y]="node.height / 2 + 10"
+            dominant-baseline="middle"
+            text-anchor="start">
+        Ext. {{ node.meta!['extensionNumber'] }}
+      </svg:text>
+    }
+  }
+
+  <!-- Inline edit mode -->
+  @if (isEditing) {
+    <svg:foreignObject x="30" y="6"
+                   [attr.width]="node.width - 36"
+                   [attr.height]="node.height - 12">
+      <input #editInput
+             class="node-edit-input"
+             type="text"
+             [(ngModel)]="editLabel"
+             (blur)="confirmEdit()"
+             (keydown)="onEditKeydown($event)"
+             (mousedown)="$event.stopPropagation()" />
+    </svg:foreignObject>
+  }
+
+  <!-- Hover actions (shown on hover, hidden otherwise) -->
+  @if (isHovered && !isEditing) {
+
+    <!-- Info icon — top right -->
+    <svg:g class="node-action"
+       [attr.transform]="'translate(' + (node.width - 22) + ', 4)'"
+       (mousedown)="openInspector($event)">
+      <svg:rect class="action-bg" x="0" y="0" width="18" height="18" rx="4" />
+      <svg:text class="action-icon" x="9" y="9" dominant-baseline="middle" text-anchor="middle">&#x2139;</svg:text>
+    </svg:g>
+
+    <!-- Edit icon — second from right -->
+    <svg:g class="node-action"
+       [attr.transform]="'translate(' + (node.width - 44) + ', 4)'"
+       (mousedown)="startEdit($event)">
+      <svg:rect class="action-bg" x="0" y="0" width="18" height="18" rx="4" />
+      <svg:text class="action-icon" x="9" y="9" dominant-baseline="middle" text-anchor="middle">&#x270E;</svg:text>
+    </svg:g>
+
+    <!-- Delete icon — top left (shifted right to not overlap color band) -->
+    <svg:g class="node-action delete-action"
+       transform="translate(8, 4)"
+       (mousedown)="deleteNode($event)">
+      <svg:rect class="action-bg delete-bg" x="0" y="0" width="18" height="18" rx="4" />
+      <svg:text class="action-icon delete-icon" x="9" y="9" dominant-baseline="middle" text-anchor="middle">&#x2715;</svg:text>
+    </svg:g>
+
+    <!-- Port handle — right edge center (only for types with output) -->
+    @if (hasOutputPort) {
+      <svg:circle class="port-handle"
+              [attr.cx]="node.width + 8"
+              [attr.cy]="node.height / 2"
+              r="6"
+              (mousedown)="onPortMouseDown($event)" />
+    }
+  }
+</svg:g>

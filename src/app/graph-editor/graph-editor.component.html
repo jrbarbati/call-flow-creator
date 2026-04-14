@@ -1,0 +1,19 @@
+<div class="editor-shell"
+     tabindex="0"
+     (dragover)="onDragOver($event)"
+     (drop)="onDrop($event)">
+
+  <app-graph-palette />
+
+  <div class="editor-main">
+    <app-graph-filter-bar />
+
+    <app-graph-canvas #canvasRef>
+    </app-graph-canvas>
+  </div>
+
+  @if (service.inspectedNode()) {
+    <app-graph-detail-panel />
+  }
+
+</div>

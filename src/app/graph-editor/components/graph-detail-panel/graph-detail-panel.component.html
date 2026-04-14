@@ -1,0 +1,98 @@
+@if (node(); as n) {
+  <aside class="detail-panel">
+    <div class="detail-header">
+      <span class="detail-header-text">NODE DETAILS</span>
+      <button class="detail-close" (click)="close()">&times;</button>
+    </div>
+
+    <div class="detail-content">
+      <!-- Type badge -->
+      <div class="detail-type-badge" [style.border-color]="typeConfig()?.color">
+        <span class="detail-type-dot" [style.background]="typeConfig()?.color"></span>
+        <span class="detail-type-label">{{ typeConfig()?.label }}</span>
+      </div>
+
+      <!-- Name -->
+      <div class="detail-field">
+        <label class="detail-label">Name</label>
+        <input class="detail-input"
+               type="text"
+               [ngModel]="n.label"
+               (ngModelChange)="onLabelChange($event)" />
+      </div>
+
+      <!-- Extension Number -->
+      @if (typeConfig()?.hasExtensionNumber) {
+        <div class="detail-field">
+          <label class="detail-label">Extension Number</label>
+          <input class="detail-input"
+                 type="text"
+                 [ngModel]="n.meta?.['extensionNumber'] ?? ''"
+                 (ngModelChange)="onMetaFieldChange('extensionNumber', $event)" />
+        </div>
+      }
+
+      <!-- Department (IVR, RG, CQ only) -->
+      @if (n.type === 'ivr' || n.type === 'ring-group' || n.type === 'call-queue') {
+        <div class="detail-field">
+          <label class="detail-label">Department</label>
+          <input class="detail-input"
+                 type="text"
+                 [ngModel]="n.meta?.['department'] ?? ''"
+                 (ngModelChange)="onMetaFieldChange('department', $event)" />
+        </div>
+      }
+
+      <!-- IVR Forwards -->
+      @if (n.type === 'ivr' && forwards().length > 0) {
+        <div class="detail-section">
+          <label class="detail-label">Forwards</label>
+          <div class="detail-forwards-list">
+            @for (fwd of forwards(); track fwd.key) {
+              <div class="detail-forward-item">
+                <span class="forward-key">{{ fwd.key }}</span>
+                <span class="forward-target">{{ fwd.targetLabel }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Ring Group Members -->
+      @if (n.type === 'ring-group') {
+        <div class="detail-section">
+          <label class="detail-label">Members</label>
+          <div class="detail-member-list">
+            @for (ext of extensions; track ext.number) {
+              <label class="detail-member-item">
+                <input type="checkbox"
+                       [checked]="isMember(ext.number)"
+                       (change)="toggleMember(ext.number)" />
+                <span class="member-number">{{ ext.number }}</span>
+                <span class="member-name">{{ ext.firstName }} {{ ext.lastName }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Call Queue Agents -->
+      @if (n.type === 'call-queue') {
+        <div class="detail-section">
+          <label class="detail-label">Agents</label>
+          <div class="detail-member-list">
+            @for (ext of extensions; track ext.number) {
+              <label class="detail-member-item">
+                <input type="checkbox"
+                       [checked]="isMember(ext.number)"
+                       (change)="toggleMember(ext.number)" />
+                <span class="member-number">{{ ext.number }}</span>
+                <span class="member-name">{{ ext.firstName }} {{ ext.lastName }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+}

@@ -1,0 +1,62 @@
+<div class="canvas-host"
+     (wheel)="onWheel($event)"
+     (mousedown)="startPan($event)"
+     (mousemove)="onMouseMove($event)"
+     (mouseup)="onMouseUp()">
+
+  <svg #svgRoot class="canvas-svg"
+       (mousedown)="onSvgMouseDown($event)">
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="8"
+              refX="7" refY="4" orient="auto">
+        <path d="M0,1 L0,7 L7,4 z" class="arrowhead-fill" />
+      </marker>
+      <marker id="arrowhead-selected" markerWidth="8" markerHeight="8"
+              refX="7" refY="4" orient="auto">
+        <path d="M0,1 L0,7 L7,4 z" class="arrowhead-fill-selected" />
+      </marker>
+    </defs>
+
+    <g [attr.transform]="svgTransform()" class="canvas-transform">
+
+      @if (isSelecting) {
+        <rect class="selection-rect"
+              [attr.x]="selectionRect.x"
+              [attr.y]="selectionRect.y"
+              [attr.width]="selectionRect.width"
+              [attr.height]="selectionRect.height" />
+      }
+
+      <!-- Edges rendered below nodes -->
+      @for (edge of service.edges(); track edge.id) {
+        <g app-graph-edge [edge]="edge"></g>
+      }
+
+      @if (isDrawingEdge) {
+        <line class="live-edge"
+              [attr.x1]="liveEdgeStart.x"
+              [attr.y1]="liveEdgeStart.y"
+              [attr.x2]="liveEdgeEnd.x"
+              [attr.y2]="liveEdgeEnd.y" />
+      }
+
+      <!-- Nodes rendered above edges -->
+      @for (node of service.nodes(); track node.id) {
+        <g app-graph-node
+           [node]="node"
+           (portDragStart)="startEdgeDraw($event.sourceId, $event.position)"
+           (nodeDropTarget)="completeEdge($event)"
+           (inspectNode)="onInspectNode($event)">
+        </g>
+      }
+
+    </g>
+  </svg>
+
+  <!-- Zoom controls overlay -->
+  <div class="zoom-controls">
+    <button class="zoom-btn" (click)="zoomIn()" title="Zoom in">+</button>
+    <button class="zoom-btn" (click)="zoomOut()" title="Zoom out">−</button>
+    <button class="zoom-btn zoom-fit" (click)="fitToScreen()" title="Fit to screen">⊡</button>
+  </div>
+</div>
