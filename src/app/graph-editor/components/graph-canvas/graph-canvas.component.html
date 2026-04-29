@@ -19,12 +19,13 @@
 
     <g [attr.transform]="svgTransform()" class="canvas-transform">
 
-      @if (isSelecting) {
+      @if (isSelecting()) {
+        @let r = selectionRect();
         <rect class="selection-rect"
-              [attr.x]="selectionRect.x"
-              [attr.y]="selectionRect.y"
-              [attr.width]="selectionRect.width"
-              [attr.height]="selectionRect.height" />
+              [attr.x]="r.x"
+              [attr.y]="r.y"
+              [attr.width]="r.width"
+              [attr.height]="r.height" />
       }
 
       <!-- Edges rendered below nodes -->
@@ -32,12 +33,14 @@
         <g app-graph-edge [edge]="edge"></g>
       }
 
-      @if (isDrawingEdge) {
+      @if (isDrawingEdge()) {
+        @let s = liveEdgeStart();
+        @let e = liveEdgeEnd();
         <line class="live-edge"
-              [attr.x1]="liveEdgeStart.x"
-              [attr.y1]="liveEdgeStart.y"
-              [attr.x2]="liveEdgeEnd.x"
-              [attr.y2]="liveEdgeEnd.y" />
+              [attr.x1]="s.x"
+              [attr.y1]="s.y"
+              [attr.x2]="e.x"
+              [attr.y2]="e.y" />
       }
 
       <!-- Nodes rendered above edges -->

@@ -1,7 +1,6 @@
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GraphEditorService } from '../../graph-editor.service';
-import { NodeType } from '../../models/node-types';
 
 interface FilterConfig {
   type: string;
@@ -17,7 +16,7 @@ interface FilterConfig {
 })
 export class GraphFilterBarComponent {
   protected readonly service = inject(GraphEditorService);
-  protected isExpanded = false;
+  protected readonly isExpanded = signal(false);
 
   protected readonly filterConfigs: FilterConfig[] = [
     { type: 'did', label: 'DID' },
@@ -27,11 +26,10 @@ export class GraphFilterBarComponent {
     { type: 'extension', label: 'Extension' },
   ];
 
-  // Track search text and dropdown visibility per filter
-  protected searchText: Record<string, string> = {};
-  protected showDropdown: Record<string, boolean> = {};
-  protected departmentSearch = '';
-  protected showDeptDropdown = false;
+  protected readonly searchText = signal<Record<string, string>>({});
+  protected readonly showDropdown = signal<Record<string, boolean>>({});
+  protected readonly departmentSearch = signal('');
+  protected readonly showDeptDropdown = signal(false);
 
   protected readonly activeFilterCount = computed(() => {
     const byType = this.service.filterByType();
@@ -51,25 +49,29 @@ export class GraphFilterBarComponent {
   });
 
   protected filteredDepartments = computed(() => {
-    const search = this.departmentSearch.toLowerCase();
+    const search = this.departmentSearch().toLowerCase();
     const all = this.allDepartments();
     if (!search) return all;
-    return all.filter(d => d.toLowerCase().includes(search));
+    return all.filter((d) => d.toLowerCase().includes(search));
   });
 
   getNodesForType(type: string) {
-    return this.service.nodes().filter(n => n.type === type);
+    return this.service.nodes().filter((n) => n.type === type);
   }
 
   getFilteredNodes(type: string) {
-    const search = (this.searchText[type] ?? '').toLowerCase();
+    const search = (this.searchText()[type] ?? '').toLowerCase();
     const nodes = this.getNodesForType(type);
     if (!search) return nodes;
-    return nodes.filter(n => {
+    return nodes.filter((n) => {
       const label = n.label.toLowerCase();
       const ext = ((n.meta?.['extensionNumber'] as string) ?? '').toLowerCase();
       return label.includes(search) || ext.includes(search);
     });
+  }
+
+  setSearchText(type: string, value: string): void {
+    this.searchText.update(s => ({ ...s, [type]: value }));
   }
 
   getSelectedIds(type: string): string[] {
@@ -92,12 +94,12 @@ export class GraphFilterBarComponent {
   }
 
   removeNode(type: string, nodeId: string): void {
-    const current = this.getSelectedIds(type).filter(id => id !== nodeId);
+    const current = this.getSelectedIds(type).filter((id) => id !== nodeId);
     this.service.setTypeFilter(type, current);
   }
 
   getNodeLabel(nodeId: string): string {
-    return this.service.nodes().find(n => n.id === nodeId)?.label ?? '';
+    return this.service.nodes().find((n) => n.id === nodeId)?.label ?? '';
   }
 
   isDeptSelected(dept: string): boolean {
@@ -116,32 +118,36 @@ export class GraphFilterBarComponent {
   }
 
   removeDepartment(dept: string): void {
-    this.service.filterByDepartment.update(d => d.filter(x => x !== dept));
+    this.service.filterByDepartment.update((d) => d.filter((x) => x !== dept));
   }
 
   toggleExpanded(): void {
-    this.isExpanded = !this.isExpanded;
+    this.isExpanded.update(v => !v);
   }
 
   clearAll(): void {
     this.service.clearFilters();
-    this.searchText = {};
-    this.departmentSearch = '';
+    this.searchText.set({});
+    this.departmentSearch.set('');
   }
 
   openDropdown(key: string): void {
-    this.showDropdown[key] = true;
+    this.showDropdown.update(s => ({ ...s, [key]: true }));
   }
 
   closeDropdown(key: string): void {
-    setTimeout(() => { this.showDropdown[key] = false; }, 150);
+    setTimeout(() => {
+      this.showDropdown.update(s => ({ ...s, [key]: false }));
+    }, 150);
   }
 
   openDeptDropdown(): void {
-    this.showDeptDropdown = true;
+    this.showDeptDropdown.set(true);
   }
 
   closeDeptDropdown(): void {
-    setTimeout(() => { this.showDeptDropdown = false; }, 150);
+    setTimeout(() => {
+      this.showDeptDropdown.set(false);
+    }, 150);
   }
 }

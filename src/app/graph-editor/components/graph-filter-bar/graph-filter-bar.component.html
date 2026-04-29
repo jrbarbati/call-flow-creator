@@ -12,7 +12,7 @@
     }
   </div>
 
-  @if (isExpanded) {
+  @if (isExpanded()) {
     <div class="filter-bar-content">
       @for (config of filterConfigs; track config.type) {
         <div class="filter-group">
@@ -23,12 +23,12 @@
             <input class="filter-input"
                    type="text"
                    [placeholder]="'Search ' + config.label + '...'"
-                   [ngModel]="searchText[config.type] ?? ''"
-                   (ngModelChange)="searchText[config.type] = $event"
+                   [ngModel]="searchText()[config.type]"
+                   (ngModelChange)="setSearchText(config.type, $event)"
                    (focus)="openDropdown(config.type)"
                    (blur)="closeDropdown(config.type)" />
 
-            @if (showDropdown[config.type]) {
+            @if (showDropdown()[config.type]) {
               <div class="filter-dropdown">
                 @for (node of getFilteredNodes(config.type); track node.id) {
                   <div class="filter-option"
@@ -66,11 +66,12 @@
           <input class="filter-input"
                  type="text"
                  placeholder="Search Department..."
-                 [(ngModel)]="departmentSearch"
+                 [ngModel]="departmentSearch()"
+                 (ngModelChange)="departmentSearch.set($event)"
                  (focus)="openDeptDropdown()"
                  (blur)="closeDeptDropdown()" />
 
-          @if (showDeptDropdown) {
+          @if (showDeptDropdown()) {
             <div class="filter-dropdown">
               @for (dept of filteredDepartments(); track dept) {
                 <div class="filter-option"

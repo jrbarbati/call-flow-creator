@@ -1,14 +1,14 @@
 import { Command } from '../models/command.model';
-import { GraphState, NodeModel, EdgeModel } from '../models/graph.models';
+import { Graph, Vertex, Edge } from '../models/graph.models';
 
 export class DeleteNodeCommand implements Command {
   readonly description = 'Delete node';
   constructor(
-    private readonly node: NodeModel,
-    private readonly connectedEdges: EdgeModel[]
+    private readonly node: Vertex,
+    private readonly connectedEdges: Edge[]
   ) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     const edgeIds = new Set(this.connectedEdges.map(e => e.id));
     return {
       nodes: state.nodes.filter(n => n.id !== this.node.id),
@@ -16,7 +16,7 @@ export class DeleteNodeCommand implements Command {
     };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return {
       nodes: [...state.nodes, this.node],
       edges: [...state.edges, ...this.connectedEdges],

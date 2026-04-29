@@ -2,10 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { GraphNodeComponent } from './graph-node.component';
 import { GraphEditorService } from '../../graph-editor.service';
-import { NodeModel } from '../../models/graph.models';
+import { Vertex } from '../../models/graph.models';
 import { vi } from 'vitest';
 
-const node: NodeModel = { id: 'n1', label: 'Test', x: 50, y: 80, width: 160, height: 48 };
+const node: Vertex = { id: 'n1', type: 'extension', label: 'Test', x: 50, y: 80, width: 160, height: 48 };
 
 describe('GraphNodeComponent', () => {
   let fixture: ComponentFixture<GraphNodeComponent>;
@@ -44,11 +44,13 @@ describe('GraphNodeComponent', () => {
   });
 
   it('emits portDragStart on port handle mousedown', () => {
+    // Re-create fixture with a node type that has an output port
+    fixture.componentRef.setInput('node', { ...node, type: 'sip-trunk' });
+    fixture.detectChanges();
     const spy = vi.fn();
     fixture.componentInstance.portDragStart.subscribe(spy);
-    // Show hover state first so port handle is visible
-    const g = fixture.nativeElement.querySelector('g.graph-node');
-    g.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    // Toggle hover state so port handle renders
+    (fixture.componentInstance as any).isHovered.set(true);
     fixture.detectChanges();
     const port = fixture.nativeElement.querySelector('.port-handle');
     port.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));

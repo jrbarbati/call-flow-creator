@@ -1,14 +1,12 @@
 import {
-  Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges,
-  HostListener, inject
+  Component, HostListener, effect, inject, input, output, untracked
 } from '@angular/core';
 import { GraphEditorService } from './graph-editor.service';
 import { GraphCanvasComponent } from './components/graph-canvas/graph-canvas.component';
 import { GraphPaletteComponent } from './components/graph-palette/graph-palette.component';
 import { GraphDetailPanelComponent } from './components/graph-detail-panel/graph-detail-panel.component';
 import { GraphFilterBarComponent } from './components/graph-filter-bar/graph-filter-bar.component';
-import { GraphModel, NodeModel } from './models/graph.models';
-import { Command } from './models/command.model';
+import { Graph, Vertex } from './models/graph.models';
 import { NODE_TYPE_CONFIGS, NodeType } from './models/node-types';
 import { AddNodeCommand } from './commands/add-node.command';
 import { DeleteNodeCommand } from './commands/delete-node.command';
@@ -18,55 +16,35 @@ import { DeleteEdgeCommand } from './commands/delete-edge.command';
   selector: 'app-graph-editor',
   standalone: true,
   imports: [GraphCanvasComponent, GraphPaletteComponent, GraphDetailPanelComponent, GraphFilterBarComponent],
-  providers: [GraphEditorService],  // scoped per component instance
+  providers: [GraphEditorService],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
-export class GraphEditorComponent implements OnInit, OnChanges {
-  @Input({ required: true }) graph!: GraphModel;
-  @Output() graphChange = new EventEmitter<GraphModel>();
+export class GraphEditorComponent {
+  readonly graph = input.required<Graph>();
+  readonly graphChange = output<Graph>();
 
   protected readonly service = inject(GraphEditorService);
 
   constructor() {
-    // Patch service.execute so every command emits graphChange synchronously.
-    // This is necessary because Angular effects run asynchronously (scheduled),
-    // but graphChange must fire immediately when the graph state changes.
-    const originalExecute = this.service.execute.bind(this.service);
-    this.service.execute = (cmd: Command) => {
-      originalExecute(cmd);
-      this.emitGraph();
-    };
+    // External graph input → load into service. Wrapped in untracked so we don't
+    // pick up downstream signal reads as dependencies.
+    effect(() => {
+      const g = this.graph();
+      untracked(() => this.service.loadGraph(g));
+    });
 
-    // Patch undo to emit graphChange
-    const originalUndo = this.service.undo.bind(this.service);
-    this.service.undo = () => {
-      originalUndo();
-      this.emitGraph();
-    };
-
-    // Patch redo to emit graphChange
-    const originalRedo = this.service.redo.bind(this.service);
-    this.service.redo = () => {
-      originalRedo();
-      this.emitGraph();
-    };
-  }
-
-  ngOnInit(): void {
-    this.service.loadGraph(this.graph);
+    // Sync emit on every command (including those triggered from child
+    // components). Effect-based watching would be async, which breaks callers
+    // that expect graphChange immediately after service.execute returns.
+    this.service.setCommandListener(() => this.emitGraph());
   }
 
   private emitGraph(): void {
-    const nodes = this.service.nodes();
-    const edges = this.service.edges();
-    this.graphChange.emit({ nodes: [...nodes], edges: [...edges] });
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['graph'] && !changes['graph'].firstChange) {
-      this.service.loadGraph(this.graph);
-    }
+    this.graphChange.emit({
+      nodes: [...this.service.nodes()],
+      edges: [...this.service.edges()],
+    });
   }
 
   @HostListener('keydown', ['$event'])
@@ -124,7 +102,7 @@ export class GraphEditorComponent implements OnInit, OnChanges {
     }
 
     const nodeHeight = NODE_TYPE_CONFIGS[type].hasExtensionNumber ? 75 : 59;
-    const node: NodeModel = {
+    const node: Vertex = {
       id: crypto.randomUUID(),
       type,
       label,

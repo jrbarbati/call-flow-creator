@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { GraphEditorService } from './graph-editor.service';
 import { AddNodeCommand } from './commands/add-node.command';
 import { AddEdgeCommand } from './commands/add-edge.command';
-import { NodeModel, EdgeModel, GraphModel } from './models/graph.models';
+import { Vertex, Edge, Graph } from './models/graph.models';
 
-const node1: NodeModel = { id: 'n1', label: 'A', x: 0, y: 0, width: 160, height: 48 };
-const node2: NodeModel = { id: 'n2', label: 'B', x: 200, y: 0, width: 160, height: 48 };
-const edge1: EdgeModel = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
+const node1: Vertex = { id: 'n1', type: 'extension', label: 'A', x: 0, y: 0, width: 160, height: 48 };
+const node2: Vertex = { id: 'n2', type: 'extension', label: 'B', x: 200, y: 0, width: 160, height: 48 };
+const edge1: Edge = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
 
 describe('GraphEditorService', () => {
   let service: GraphEditorService;
@@ -60,7 +60,7 @@ describe('GraphEditorService', () => {
 
   it('loadGraph replaces state without adding to history', () => {
     service.execute(new AddNodeCommand(node1));
-    const graph: GraphModel = { nodes: [node2], edges: [edge1] };
+    const graph: Graph = { nodes: [node2], edges: [edge1] };
     service.loadGraph(graph);
     expect(service.nodes()).toEqual([node2]);
     expect(service.edges()).toEqual([edge1]);

@@ -1,9 +1,9 @@
 import {
-  Component, computed, inject, ElementRef, ViewChild
+  Component, computed, inject, signal, ElementRef, ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GraphEditorService } from '../../graph-editor.service';
-import { NodeModel, EdgeModel } from '../../models/graph.models';
+import { Vertex, Edge } from '../../models/graph.models';
 import { AddEdgeCommand } from '../../commands/add-edge.command';
 import { GraphNodeComponent } from '../graph-node/graph-node.component';
 import { GraphEdgeComponent } from '../graph-edge/graph-edge.component';
@@ -29,14 +29,14 @@ export class GraphCanvasComponent {
   private transformAtPanStart = { x: 0, y: 0 };
 
   // Edge drawing state
-  protected isDrawingEdge = false;
+  protected readonly isDrawingEdge = signal(false);
   protected edgeSourceId: string | null = null;
-  protected liveEdgeEnd = { x: 0, y: 0 };
-  protected liveEdgeStart = { x: 0, y: 0 };
+  protected readonly liveEdgeStart = signal({ x: 0, y: 0 });
+  protected readonly liveEdgeEnd = signal({ x: 0, y: 0 });
 
   // Rubber-band state
-  protected isSelecting = false;
-  protected selectionRect = { x: 0, y: 0, width: 0, height: 0 };
+  protected readonly isSelecting = signal(false);
+  protected readonly selectionRect = signal({ x: 0, y: 0, width: 0, height: 0 });
   private selectionStart = { x: 0, y: 0 };
 
   @ViewChild('svgRoot') svgRoot!: ElementRef<SVGSVGElement>;
@@ -47,8 +47,8 @@ export class GraphCanvasComponent {
 
     const pt = this.svgPoint(event);
     this.selectionStart = pt;
-    this.selectionRect = { x: pt.x, y: pt.y, width: 0, height: 0 };
-    this.isSelecting = true;
+    this.selectionRect.set({ x: pt.x, y: pt.y, width: 0, height: 0 });
+    this.isSelecting.set(true);
     event.preventDefault();
   }
 
@@ -63,30 +63,29 @@ export class GraphCanvasComponent {
       }));
     }
 
-    if (this.isSelecting) {
+    if (this.isSelecting()) {
       const pt = this.svgPoint(event);
-      this.selectionRect = {
+      this.selectionRect.set({
         x: Math.min(pt.x, this.selectionStart.x),
         y: Math.min(pt.y, this.selectionStart.y),
         width: Math.abs(pt.x - this.selectionStart.x),
         height: Math.abs(pt.y - this.selectionStart.y),
-      };
+      });
     }
 
-    if (this.isDrawingEdge) {
-      const canvas = this.canvasPoint(event);
-      this.liveEdgeEnd = canvas;
+    if (this.isDrawingEdge()) {
+      this.liveEdgeEnd.set(this.canvasPoint(event));
     }
   }
 
   onMouseUp(): void {
-    if (this.isSelecting) {
+    if (this.isSelecting()) {
       this.applyRubberBandSelection();
-      this.isSelecting = false;
+      this.isSelecting.set(false);
     }
     this.isPanning = false;
-    if (this.isDrawingEdge) {
-      this.isDrawingEdge = false;
+    if (this.isDrawingEdge()) {
+      this.isDrawingEdge.set(false);
       this.edgeSourceId = null;
     }
   }
@@ -121,16 +120,16 @@ export class GraphCanvasComponent {
   }
 
   startEdgeDraw(sourceId: string, portPosition: { x: number; y: number }): void {
-    this.isDrawingEdge = true;
+    this.isDrawingEdge.set(true);
     this.edgeSourceId = sourceId;
-    this.liveEdgeStart = portPosition;
-    this.liveEdgeEnd = portPosition;
+    this.liveEdgeStart.set(portPosition);
+    this.liveEdgeEnd.set(portPosition);
   }
 
-  completeEdge(targetNode: NodeModel): void {
-    if (!this.isDrawingEdge || !this.edgeSourceId) return;
+  completeEdge(targetNode: Vertex): void {
+    if (!this.isDrawingEdge() || !this.edgeSourceId) return;
     if (this.edgeSourceId === targetNode.id) {
-      this.isDrawingEdge = false;
+      this.isDrawingEdge.set(false);
       this.edgeSourceId = null;
       return;
     }
@@ -141,7 +140,7 @@ export class GraphCanvasComponent {
     const sourceDept = (sourceNode?.meta?.['department'] as string) ?? '';
     const targetDept = (targetNode.meta?.['department'] as string) ?? '';
     if (sourceDept && targetDept && sourceDept !== targetDept) {
-      this.isDrawingEdge = false;
+      this.isDrawingEdge.set(false);
       this.edgeSourceId = null;
       return;
     }
@@ -152,7 +151,7 @@ export class GraphCanvasComponent {
       const existingEdges = this.service.edges().filter(e => e.sourceId === this.edgeSourceId);
       if (existingEdges.length >= 10) {
         // IVR max 10 outputs (keys 0-9)
-        this.isDrawingEdge = false;
+        this.isDrawingEdge.set(false);
         this.edgeSourceId = null;
         return;
       }
@@ -161,14 +160,14 @@ export class GraphCanvasComponent {
       label = allKeys.find(k => !usedKeys.has(k));
     }
 
-    const edge: EdgeModel = {
+    const edge: Edge = {
       id: crypto.randomUUID(),
       sourceId: this.edgeSourceId,
       targetId: targetNode.id,
       ...(label ? { label } : {}),
     };
     this.service.execute(new AddEdgeCommand(edge));
-    this.isDrawingEdge = false;
+    this.isDrawingEdge.set(false);
     this.edgeSourceId = null;
   }
 
@@ -229,7 +228,7 @@ export class GraphCanvasComponent {
   }
 
   private applyRubberBandSelection(): void {
-    const r = this.selectionRect;
+    const r = this.selectionRect();
     if (r.width < 4 && r.height < 4) return;
     const selected = new Set<string>();
     for (const node of this.service.nodes()) {

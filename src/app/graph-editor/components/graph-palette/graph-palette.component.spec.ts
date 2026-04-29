@@ -60,7 +60,7 @@ describe('GraphPaletteComponent', () => {
     item.dispatchEvent(event);
     expect(setData).toHaveBeenCalledWith('node-type', 'extension');
     expect(setData).toHaveBeenCalledWith('extension-data', expect.any(String));
-    const extData = JSON.parse(setData.mock.calls.find((c: any) => c[0] === 'extension-data')[1]);
+    const extData = JSON.parse(setData.mock.calls.find((c: any) => c[0] === 'extension-data')![1]);
     expect(extData.number).toBeTruthy();
     expect(extData.firstName).toBeTruthy();
     expect(extData.lastName).toBeTruthy();

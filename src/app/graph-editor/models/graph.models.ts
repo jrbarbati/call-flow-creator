@@ -1,6 +1,6 @@
 import { NodeType } from './node-types';
 
-export interface NodeModel {
+export interface Vertex {
   id: string;
   type: NodeType;
   label: string;
@@ -11,7 +11,7 @@ export interface NodeModel {
   meta?: Record<string, unknown>;
 }
 
-export interface EdgeModel {
+export interface Edge {
   id: string;
   sourceId: string;
   targetId: string;
@@ -19,14 +19,9 @@ export interface EdgeModel {
   meta?: Record<string, unknown>;
 }
 
-export interface GraphModel {
-  nodes: NodeModel[];
-  edges: EdgeModel[];
-}
-
-export interface GraphState {
-  nodes: NodeModel[];
-  edges: EdgeModel[];
+export interface Graph {
+  nodes: Vertex[];
+  edges: Edge[];
 }
 
 export interface ViewTransform {

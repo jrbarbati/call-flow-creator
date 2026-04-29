@@ -1,5 +1,5 @@
 import { Command } from '../models/command.model';
-import { GraphState } from '../models/graph.models';
+import { Graph } from '../models/graph.models';
 
 export class RenameNodeCommand implements Command {
   readonly description = 'Rename node';
@@ -9,7 +9,7 @@ export class RenameNodeCommand implements Command {
     private readonly to: string
   ) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>
@@ -18,7 +18,7 @@ export class RenameNodeCommand implements Command {
     };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>

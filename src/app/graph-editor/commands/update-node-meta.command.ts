@@ -1,5 +1,5 @@
 import { Command } from '../models/command.model';
-import { GraphState, NodeModel } from '../models/graph.models';
+import { Graph, Vertex } from '../models/graph.models';
 
 export class UpdateNodeMetaCommand implements Command {
   readonly description = 'Update node metadata';
@@ -9,7 +9,7 @@ export class UpdateNodeMetaCommand implements Command {
     private readonly newMeta: Record<string, unknown>
   ) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>
@@ -18,7 +18,7 @@ export class UpdateNodeMetaCommand implements Command {
     };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>

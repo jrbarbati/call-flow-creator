@@ -1,15 +1,15 @@
 import { Command } from '../models/command.model';
-import { GraphState, NodeModel } from '../models/graph.models';
+import { Graph, Vertex } from '../models/graph.models';
 
 export class AddNodeCommand implements Command {
   readonly description = 'Add node';
-  constructor(private readonly node: NodeModel) {}
+  constructor(private readonly node: Vertex) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     return { ...state, nodes: [...state.nodes, this.node] };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return { ...state, nodes: state.nodes.filter(n => n.id !== this.node.id) };
   }
 }

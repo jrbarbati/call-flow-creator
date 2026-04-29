@@ -1,13 +1,21 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Command } from './models/command.model';
-import { GraphState, GraphModel, EdgeModel, NodeModel, ViewTransform } from './models/graph.models';
+import { Graph, Edge, Vertex, ViewTransform } from './models/graph.models';
 import { NodeType } from './models/node-types';
 
 @Injectable()
 export class GraphEditorService {
-  private state = signal<GraphState>({ nodes: [], edges: [] });
+  private state = signal<Graph>({ nodes: [], edges: [] });
   private history: Command[] = [];
   private historyIndex = -1;
+  private commandListener: (() => void) | null = null;
+
+  // Register a listener invoked synchronously after every execute/undo/redo.
+  // Used by the host component to emit graphChange immediately on state change,
+  // including changes triggered from child components that hold the service.
+  setCommandListener(fn: (() => void) | null): void {
+    this.commandListener = fn;
+  }
 
   readonly nodes = computed(() => this.state().nodes);
   readonly edges = computed(() => this.state().edges);
@@ -88,7 +96,7 @@ export class GraphEditorService {
     return result;
   }
 
-  private traceAllPaths(seedIds: Set<string>, nodes: NodeModel[], edges: EdgeModel[]): Set<string> {
+  private traceAllPaths(seedIds: Set<string>, nodes: Vertex[], edges: Edge[]): Set<string> {
     const result = new Set<string>(seedIds);
 
     // Build adjacency maps
@@ -142,6 +150,7 @@ export class GraphEditorService {
     this.history = this.history.slice(0, this.historyIndex + 1);
     this.history.push(cmd);
     this.historyIndex++;
+    this.commandListener?.();
   }
 
   undo(): void {
@@ -149,6 +158,7 @@ export class GraphEditorService {
     const cmd = this.history[this.historyIndex];
     this.state.update(s => cmd.undo(s));
     this.historyIndex--;
+    this.commandListener?.();
   }
 
   redo(): void {
@@ -156,14 +166,24 @@ export class GraphEditorService {
     this.historyIndex++;
     const cmd = this.history[this.historyIndex];
     this.state.update(s => cmd.execute(s));
+    this.commandListener?.();
   }
 
-  loadGraph(graph: GraphModel): void {
+  loadGraph(graph: Graph): void {
     this.state.set({ nodes: [...graph.nodes], edges: [...graph.edges] });
     // loadGraph does not affect undo history — it is a controlled external sync
   }
 
-  toGraphModel(): GraphModel {
+  // Apply a live (uncommitted) position update during a drag.
+  // Caller is responsible for committing a MoveNodeCommand on drop.
+  applyLiveNodePosition(nodeId: string, x: number, y: number): void {
+    this.state.update(s => ({
+      ...s,
+      nodes: s.nodes.map(n => n.id === nodeId ? { ...n, x, y } : n),
+    }));
+  }
+
+  toGraphModel(): Graph {
     return { nodes: [...this.state().nodes], edges: [...this.state().edges] };
   }
 
@@ -179,7 +199,7 @@ export class GraphEditorService {
     return Math.round(value / grid) * grid;
   }
 
-  connectedEdges(nodeId: string): EdgeModel[] {
+  connectedEdges(nodeId: string): Edge[] {
     return this.state().edges.filter(
       e => e.sourceId === nodeId || e.targetId === nodeId
     );

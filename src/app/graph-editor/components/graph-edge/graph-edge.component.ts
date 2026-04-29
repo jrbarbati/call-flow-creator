@@ -1,7 +1,7 @@
-import { Component, Input, Output, EventEmitter, computed, inject, NO_ERRORS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
+import { Component, computed, inject, input, signal, NO_ERRORS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GraphEditorService } from '../../graph-editor.service';
-import { EdgeModel, NodeModel } from '../../models/graph.models';
+import { Edge, Vertex } from '../../models/graph.models';
 import { RenameEdgeCommand } from '../../commands/rename-edge.command';
 
 @Component({
@@ -13,48 +13,50 @@ import { RenameEdgeCommand } from '../../commands/rename-edge.command';
   schemas: [NO_ERRORS_SCHEMA],
 })
 export class GraphEdgeComponent {
-  @Input({ required: true }) edge!: EdgeModel;
+  readonly edge = input.required<Edge>();
 
   protected readonly service = inject(GraphEditorService);
 
-  protected isSelected = computed(() => this.service.selectedIds().has(this.edge.id));
+  protected readonly isSelected = computed(() => this.service.selectedIds().has(this.edge().id));
 
-  protected isDimmed = computed(() => {
+  protected readonly isDimmed = computed(() => {
     if (!this.service.isFilterActive()) return false;
-    return !this.service.highlightedEdgeIds().has(this.edge.id);
+    return !this.service.highlightedEdgeIds().has(this.edge().id);
   });
 
-  protected isEditingLabel = false;
-  protected editLabelValue = '';
+  protected readonly isEditingLabel = signal(false);
+  protected readonly editLabelValue = signal('');
 
   @ViewChild('edgeLabelInput') edgeLabelInput?: ElementRef<HTMLInputElement>;
 
-  get pathD(): string {
+  private readonly endpoints = computed(() => {
+    const e = this.edge();
     const nodes = this.service.nodes();
-    const src = nodes.find(n => n.id === this.edge.sourceId);
-    const tgt = nodes.find(n => n.id === this.edge.targetId);
-    if (!src || !tgt) return '';
-    return this.bezierPath(src, tgt);
-  }
+    const src = nodes.find(n => n.id === e.sourceId);
+    const tgt = nodes.find(n => n.id === e.targetId);
+    return src && tgt ? { src, tgt } : null;
+  });
 
-  get markerEnd(): string {
-    return this.isSelected() ? 'url(#arrowhead-selected)' : 'url(#arrowhead)';
-  }
+  readonly pathD = computed(() => {
+    const ep = this.endpoints();
+    return ep ? this.bezierPath(ep.src, ep.tgt) : '';
+  });
 
-  get labelPosition(): { x: number; y: number } | null {
-    const nodes = this.service.nodes();
-    const src = nodes.find(n => n.id === this.edge.sourceId);
-    const tgt = nodes.find(n => n.id === this.edge.targetId);
-    if (!src || !tgt) return null;
-    const sx = src.x + src.width;
-    const sy = src.y + src.height / 2;
-    const tx = tgt.x;
-    const ty = tgt.y + tgt.height / 2;
-    // Midpoint of bezier (approximate)
+  readonly markerEnd = computed(() =>
+    this.isSelected() ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'
+  );
+
+  readonly labelPosition = computed(() => {
+    const ep = this.endpoints();
+    if (!ep) return null;
+    const sx = ep.src.x + ep.src.width;
+    const sy = ep.src.y + ep.src.height / 2;
+    const tx = ep.tgt.x;
+    const ty = ep.tgt.y + ep.tgt.height / 2;
     return { x: (sx + tx) / 2, y: (sy + ty) / 2 - 8 };
-  }
+  });
 
-  private bezierPath(src: NodeModel, tgt: NodeModel): string {
+  private bezierPath(src: Vertex, tgt: Vertex): string {
     const sx = src.x + src.width;
     const sy = src.y + src.height / 2;
     const tx = tgt.x;
@@ -65,28 +67,29 @@ export class GraphEdgeComponent {
 
   onEdgeClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.service.selectedIds.set(new Set([this.edge.id]));
+    this.service.selectedIds.set(new Set([this.edge().id]));
   }
 
   startLabelEdit(event: MouseEvent): void {
     event.stopPropagation();
-    this.isEditingLabel = true;
-    this.editLabelValue = this.edge.label ?? '';
+    this.isEditingLabel.set(true);
+    this.editLabelValue.set(this.edge().label ?? '');
     setTimeout(() => this.edgeLabelInput?.nativeElement?.focus(), 0);
   }
 
   confirmLabelEdit(): void {
-    if (!this.isEditingLabel) return;
-    this.isEditingLabel = false;
-    const trimmed = this.editLabelValue.trim();
-    if (trimmed !== (this.edge.label ?? '')) {
-      this.service.execute(new RenameEdgeCommand(this.edge.id, this.edge.label ?? '', trimmed));
+    if (!this.isEditingLabel()) return;
+    this.isEditingLabel.set(false);
+    const trimmed = this.editLabelValue().trim();
+    const e = this.edge();
+    if (trimmed !== (e.label ?? '')) {
+      this.service.execute(new RenameEdgeCommand(e.id, e.label ?? '', trimmed));
     }
   }
 
   onLabelKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter') this.confirmLabelEdit();
-    if (event.key === 'Escape') this.isEditingLabel = false;
+    if (event.key === 'Escape') this.isEditingLabel.set(false);
     event.stopPropagation();
   }
 }

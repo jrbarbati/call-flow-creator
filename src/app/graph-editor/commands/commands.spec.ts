@@ -4,15 +4,15 @@ import { RenameNodeCommand } from './rename-node.command';
 import { DeleteNodeCommand } from './delete-node.command';
 import { AddEdgeCommand } from './add-edge.command';
 import { DeleteEdgeCommand } from './delete-edge.command';
-import { GraphState, NodeModel, EdgeModel } from '../models/graph.models';
+import { Graph, Vertex, Edge } from '../models/graph.models';
 
-const node1: NodeModel = { id: 'n1', type: 'sip-trunk', label: 'A', x: 10, y: 20, width: 160, height: 48 };
-const node2: NodeModel = { id: 'n2', type: 'did', label: 'B', x: 200, y: 20, width: 160, height: 48 };
-const edge1: EdgeModel = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
+const node1: Vertex = { id: 'n1', type: 'sip-trunk', label: 'A', x: 10, y: 20, width: 160, height: 48 };
+const node2: Vertex = { id: 'n2', type: 'did', label: 'B', x: 200, y: 20, width: 160, height: 48 };
+const edge1: Edge = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
 
-const emptyState: GraphState = { nodes: [], edges: [] };
-const stateWithNodes: GraphState = { nodes: [node1, node2], edges: [] };
-const stateWithEdge: GraphState = { nodes: [node1, node2], edges: [edge1] };
+const emptyState: Graph = { nodes: [], edges: [] };
+const stateWithNodes: Graph = { nodes: [node1, node2], edges: [] };
+const stateWithEdge: Graph = { nodes: [node1, node2], edges: [edge1] };
 
 describe('AddNodeCommand', () => {
   it('adds a node on execute', () => {

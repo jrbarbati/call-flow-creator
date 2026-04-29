@@ -1,15 +1,15 @@
 import { Command } from '../models/command.model';
-import { GraphState, EdgeModel } from '../models/graph.models';
+import { Graph, Edge } from '../models/graph.models';
 
 export class DeleteEdgeCommand implements Command {
   readonly description = 'Delete edge';
-  constructor(private readonly edge: EdgeModel) {}
+  constructor(private readonly edge: Edge) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     return { ...state, edges: state.edges.filter(e => e.id !== this.edge.id) };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return { ...state, edges: [...state.edges, this.edge] };
   }
 }

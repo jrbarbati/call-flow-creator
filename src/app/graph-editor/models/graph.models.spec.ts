@@ -1,8 +1,8 @@
-import { GraphModel, NodeModel, EdgeModel } from './graph.models';
+import { Graph, Vertex, Edge } from './graph.models';
 
 describe('GraphModel types', () => {
   it('should construct a valid NodeModel with defaults', () => {
-    const node: NodeModel = {
+    const node: Vertex = {
       id: 'n1',
       type: 'sip-trunk',
       label: 'Test Node',
@@ -17,7 +17,7 @@ describe('GraphModel types', () => {
   });
 
   it('should construct a valid EdgeModel', () => {
-    const edge: EdgeModel = {
+    const edge: Edge = {
       id: 'e1',
       sourceId: 'n1',
       targetId: 'n2',
@@ -27,7 +27,7 @@ describe('GraphModel types', () => {
   });
 
   it('should construct a valid GraphModel', () => {
-    const graph: GraphModel = { nodes: [], edges: [] };
+    const graph: Graph = { nodes: [], edges: [] };
     expect(graph.nodes).toEqual([]);
     expect(graph.edges).toEqual([]);
   });

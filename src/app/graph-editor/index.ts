@@ -1,2 +1,2 @@
 export { GraphEditorComponent } from './graph-editor.component';
-export type { GraphModel, NodeModel, EdgeModel } from './models/graph.models';
+export type { Graph, Vertex, Edge } from './models/graph.models';

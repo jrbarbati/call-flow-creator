@@ -1,5 +1,5 @@
 import { Command } from '../models/command.model';
-import { GraphState } from '../models/graph.models';
+import { Graph } from '../models/graph.models';
 
 export class MoveNodeCommand implements Command {
   readonly description = 'Move node';
@@ -9,7 +9,7 @@ export class MoveNodeCommand implements Command {
     private readonly to: { x: number; y: number }
   ) {}
 
-  execute(state: GraphState): GraphState {
+  execute(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>
@@ -18,7 +18,7 @@ export class MoveNodeCommand implements Command {
     };
   }
 
-  undo(state: GraphState): GraphState {
+  undo(state: Graph): Graph {
     return {
       ...state,
       nodes: state.nodes.map(n =>

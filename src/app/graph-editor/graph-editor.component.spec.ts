@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GraphEditorComponent } from './graph-editor.component';
-import { GraphModel } from './models/graph.models';
+import { Graph } from './models/graph.models';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 
-const emptyGraph: GraphModel = { nodes: [], edges: [] };
-const testGraph: GraphModel = {
-  nodes: [{ id: 'n1', label: 'A', x: 0, y: 0, width: 160, height: 48 }],
+const emptyGraph: Graph = { nodes: [], edges: [] };
+const testGraph: Graph = {
+  nodes: [{ id: 'n1', type: 'extension', label: 'A', x: 0, y: 0, width: 160, height: 48 }],
   edges: [],
 };
 
@@ -39,12 +39,12 @@ describe('GraphEditorComponent', () => {
     fixture.componentRef.setInput('graph', emptyGraph);
     fixture.detectChanges();
 
-    const emitted: GraphModel[] = [];
-    fixture.componentInstance.graphChange.subscribe((g: GraphModel) => emitted.push(g));
+    const emitted: Graph[] = [];
+    fixture.componentInstance.graphChange.subscribe((g: Graph) => emitted.push(g));
 
     const service = fixture.componentInstance['service'];
     const { AddNodeCommand } = await import('./commands/add-node.command');
-    service.execute(new AddNodeCommand({ id: 'n2', label: 'B', x: 0, y: 0, width: 160, height: 48 }));
+    service.execute(new AddNodeCommand({ id: 'n2', type: 'extension', label: 'B', x: 0, y: 0, width: 160, height: 48 }));
 
     expect(emitted.length).toBeGreaterThan(0);
     expect(emitted[emitted.length - 1].nodes.some((n: any) => n.id === 'n2')).toBe(true);
@@ -56,10 +56,10 @@ describe('GraphEditorComponent', () => {
 
     const { AddNodeCommand } = await import('./commands/add-node.command');
     const service = fixture.componentInstance['service'];
-    service.execute(new AddNodeCommand({ id: 'n3', label: 'C', x: 0, y: 0, width: 160, height: 48 }));
+    service.execute(new AddNodeCommand({ id: 'n3', type: 'extension', label: 'C', x: 0, y: 0, width: 160, height: 48 }));
 
-    const emitted: GraphModel[] = [];
-    fixture.componentInstance.graphChange.subscribe((g: GraphModel) => emitted.push(g));
+    const emitted: Graph[] = [];
+    fixture.componentInstance.graphChange.subscribe((g: Graph) => emitted.push(g));
 
     service.undo();
 

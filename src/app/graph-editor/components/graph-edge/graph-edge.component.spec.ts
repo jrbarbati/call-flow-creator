@@ -1,12 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GraphEdgeComponent } from './graph-edge.component';
 import { GraphEditorService } from '../../graph-editor.service';
-import { EdgeModel, NodeModel } from '../../models/graph.models';
+import { Edge, Vertex } from '../../models/graph.models';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 
-const node1: NodeModel = { id: 'n1', label: 'A', x: 0, y: 0, width: 160, height: 48 };
-const node2: NodeModel = { id: 'n2', label: 'B', x: 300, y: 100, width: 160, height: 48 };
-const edge: EdgeModel = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
+const node1: Vertex = { id: 'n1', type: 'extension', label: 'A', x: 0, y: 0, width: 160, height: 48 };
+const node2: Vertex = { id: 'n2', type: 'extension', label: 'B', x: 300, y: 100, width: 160, height: 48 };
+const edge: Edge = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
 
 describe('GraphEdgeComponent', () => {
   let fixture: ComponentFixture<GraphEdgeComponent>;

@@ -1,7 +1,7 @@
-import { GraphState } from './graph.models';
+import { Graph } from './graph.models';
 
 export interface Command {
-  execute(state: GraphState): GraphState;
-  undo(state: GraphState): GraphState;
+  execute(state: Graph): Graph;
+  undo(state: Graph): Graph;
   readonly description: string;
 }
