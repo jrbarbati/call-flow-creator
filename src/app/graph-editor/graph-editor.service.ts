@@ -1,24 +1,28 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Command } from './models/command.model';
 import { Graph, Edge, Vertex, ViewTransform } from './models/graph.models';
-import { NodeType } from './models/node-types';
+import { EdgeDerivationService } from './services/edge-derivation.service';
+import { AutoSpawnService } from './services/auto-spawn.service';
+import { CompositeCommand } from './commands/composite.command';
 
 @Injectable()
 export class GraphEditorService {
-  private state = signal<Graph>({ nodes: [], edges: [] });
+  private state = signal<Graph>({ nodes: [] });
   private history: Command[] = [];
   private historyIndex = -1;
   private commandListener: (() => void) | null = null;
 
-  // Register a listener invoked synchronously after every execute/undo/redo.
-  // Used by the host component to emit graphChange immediately on state change,
-  // including changes triggered from child components that hold the service.
+  private readonly edgeDerivation = inject(EdgeDerivationService);
+  private readonly autoSpawn = inject(AutoSpawnService);
+
   setCommandListener(fn: (() => void) | null): void {
     this.commandListener = fn;
   }
 
   readonly nodes = computed(() => this.state().nodes);
-  readonly edges = computed(() => this.state().edges);
+  readonly derivedEdges = computed(() => this.edgeDerivation.deriveEdges(this.state().nodes));
+  readonly edges = this.derivedEdges; // backward-compat alias
+
   readonly selectedIds = signal<Set<string>>(new Set());
   readonly viewTransform = signal<ViewTransform>({ x: 0, y: 0, scale: 1 });
   readonly inspectedNodeId = signal<string | null>(null);
@@ -27,15 +31,11 @@ export class GraphEditorService {
     if (!id) return null;
     return this.state().nodes.find(n => n.id === id) ?? null;
   });
+
   private nextExtensionNumber = 800;
 
-  // Filter state
   readonly filterByType = signal<Record<string, string[]>>({
-    'did': [],
-    'ivr': [],
-    'ring-group': [],
-    'call-queue': [],
-    'extension': [],
+    'did': [], 'ivr': [], 'ring-group': [], 'call-queue': [], 'extension': [],
   });
   readonly filterByDepartment = signal<string[]>([]);
   readonly isFilterActive = computed(() => {
@@ -55,101 +55,24 @@ export class GraphEditorService {
     this.filterByType.update(f => ({ ...f, [type]: nodeIds }));
   }
 
-  private computeHighlightedNodes(): Set<string> {
-    if (!this.isFilterActive()) return new Set();
-
-    const nodes = this.state().nodes;
-    const edges = this.state().edges;
-    const seedIds = new Set<string>();
-
-    // Collect seed nodes from type filters
-    const byType = this.filterByType();
-    for (const ids of Object.values(byType)) {
-      for (const id of ids) seedIds.add(id);
-    }
-
-    // Collect seed nodes from department filter
-    const depts = this.filterByDepartment();
-    if (depts.length > 0) {
-      for (const n of nodes) {
-        const dept = (n.meta?.['department'] as string) ?? '';
-        if (dept && depts.includes(dept)) seedIds.add(n.id);
-      }
-    }
-
-    if (seedIds.size === 0) return new Set();
-
-    // Trace paths bidirectionally from seed nodes
-    return this.traceAllPaths(seedIds, nodes, edges);
-  }
-
-  private computeHighlightedEdges(): Set<string> {
-    if (!this.isFilterActive()) return new Set();
-    const highlighted = this.highlightedNodeIds();
-    if (highlighted.size === 0) return new Set();
-    const result = new Set<string>();
-    for (const e of this.state().edges) {
-      if (highlighted.has(e.sourceId) && highlighted.has(e.targetId)) {
-        result.add(e.id);
-      }
-    }
-    return result;
-  }
-
-  private traceAllPaths(seedIds: Set<string>, nodes: Vertex[], edges: Edge[]): Set<string> {
-    const result = new Set<string>(seedIds);
-
-    // Build adjacency maps
-    const outgoing = new Map<string, string[]>();
-    const incoming = new Map<string, string[]>();
-    for (const e of edges) {
-      if (!outgoing.has(e.sourceId)) outgoing.set(e.sourceId, []);
-      outgoing.get(e.sourceId)!.push(e.targetId);
-      if (!incoming.has(e.targetId)) incoming.set(e.targetId, []);
-      incoming.get(e.targetId)!.push(e.sourceId);
-    }
-
-    // BFS forward (downstream)
-    const forwardQueue = [...seedIds];
-    const visitedForward = new Set<string>(seedIds);
-    while (forwardQueue.length > 0) {
-      const current = forwardQueue.shift()!;
-      for (const next of outgoing.get(current) ?? []) {
-        if (!visitedForward.has(next)) {
-          visitedForward.add(next);
-          result.add(next);
-          forwardQueue.push(next);
-        }
-      }
-    }
-
-    // BFS backward (upstream)
-    const backwardQueue = [...seedIds];
-    const visitedBackward = new Set<string>(seedIds);
-    while (backwardQueue.length > 0) {
-      const current = backwardQueue.shift()!;
-      for (const prev of incoming.get(current) ?? []) {
-        if (!visitedBackward.has(prev)) {
-          visitedBackward.add(prev);
-          result.add(prev);
-          backwardQueue.push(prev);
-        }
-      }
-    }
-
-    return result;
-  }
-
-  assignExtensionNumber(): string {
-    return String(this.nextExtensionNumber++);
-  }
+  // -----------------------------------------------------------------------
 
   execute(cmd: Command): void {
-    const newState = cmd.execute(this.state());
-    this.state.set(newState);
-    this.history = this.history.slice(0, this.historyIndex + 1);
-    this.history.push(cmd);
-    this.historyIndex++;
+    const afterCmd = cmd.execute(this.state());
+    const spawns = this.autoSpawn.requiredSpawns(afterCmd.nodes);
+    if (spawns.length === 0) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+      this.history.push(cmd);
+      this.historyIndex++;
+      this.state.set(afterCmd);
+    } else {
+      const composite = new CompositeCommand([cmd, ...spawns], cmd.description);
+      const finalState = composite.execute(this.state());
+      this.history = this.history.slice(0, this.historyIndex + 1);
+      this.history.push(composite);
+      this.historyIndex++;
+      this.state.set(finalState);
+    }
     this.commandListener?.();
   }
 
@@ -170,12 +93,12 @@ export class GraphEditorService {
   }
 
   loadGraph(graph: Graph): void {
-    this.state.set({ nodes: [...graph.nodes], edges: [...graph.edges] });
-    // loadGraph does not affect undo history — it is a controlled external sync
+    const cleaned: Graph = { nodes: [...graph.nodes] };
+    const spawns = this.autoSpawn.requiredSpawns(cleaned.nodes);
+    const final = spawns.reduce((s, c) => c.execute(s), cleaned);
+    this.state.set(final);
   }
 
-  // Apply a live (uncommitted) position update during a drag.
-  // Caller is responsible for committing a MoveNodeCommand on drop.
   applyLiveNodePosition(nodeId: string, x: number, y: number): void {
     this.state.update(s => ({
       ...s,
@@ -183,8 +106,12 @@ export class GraphEditorService {
     }));
   }
 
+  assignExtensionNumber(): string {
+    return String(this.nextExtensionNumber++);
+  }
+
   toGraphModel(): Graph {
-    return { nodes: [...this.state().nodes], edges: [...this.state().edges] };
+    return { nodes: [...this.state().nodes] };
   }
 
   screenToCanvas(screenX: number, screenY: number): { x: number; y: number } {
@@ -200,8 +127,90 @@ export class GraphEditorService {
   }
 
   connectedEdges(nodeId: string): Edge[] {
-    return this.state().edges.filter(
-      e => e.sourceId === nodeId || e.targetId === nodeId
-    );
+    return this.derivedEdges().filter(e => e.sourceId === nodeId || e.targetId === nodeId);
   }
+
+  // -----------------------------------------------------------------------
+
+  private computeHighlightedNodes(): Set<string> {
+    if (!this.isFilterActive()) return new Set();
+
+    const nodes = this.state().nodes;
+    const edges = this.derivedEdges();
+    const seedIds = new Set<string>();
+
+    const byType = this.filterByType();
+    for (const ids of Object.values(byType)) {
+      for (const id of ids) seedIds.add(id);
+    }
+
+    const depts = this.filterByDepartment();
+    if (depts.length > 0) {
+      for (const n of nodes) {
+        const dept = nodeDepartmentName(n);
+        if (dept && depts.includes(dept)) seedIds.add(n.id);
+      }
+    }
+
+    if (seedIds.size === 0) return new Set();
+    return this.traceAllPaths(seedIds, nodes, edges);
+  }
+
+  private computeHighlightedEdges(): Set<string> {
+    if (!this.isFilterActive()) return new Set();
+    const highlighted = this.highlightedNodeIds();
+    if (highlighted.size === 0) return new Set();
+    const result = new Set<string>();
+    for (const e of this.derivedEdges()) {
+      if (highlighted.has(e.sourceId) && highlighted.has(e.targetId)) {
+        result.add(e.id);
+      }
+    }
+    return result;
+  }
+
+  private traceAllPaths(seedIds: Set<string>, _nodes: Vertex[], edges: Edge[]): Set<string> {
+    const result = new Set<string>(seedIds);
+    const outgoing = new Map<string, string[]>();
+    const incoming = new Map<string, string[]>();
+    for (const e of edges) {
+      if (!outgoing.has(e.sourceId)) outgoing.set(e.sourceId, []);
+      outgoing.get(e.sourceId)!.push(e.targetId);
+      if (!incoming.has(e.targetId)) incoming.set(e.targetId, []);
+      incoming.get(e.targetId)!.push(e.sourceId);
+    }
+
+    const forwardQueue = [...seedIds];
+    const visitedForward = new Set<string>(seedIds);
+    while (forwardQueue.length > 0) {
+      const current = forwardQueue.shift()!;
+      for (const next of outgoing.get(current) ?? []) {
+        if (!visitedForward.has(next)) {
+          visitedForward.add(next);
+          result.add(next);
+          forwardQueue.push(next);
+        }
+      }
+    }
+
+    const backwardQueue = [...seedIds];
+    const visitedBackward = new Set<string>(seedIds);
+    while (backwardQueue.length > 0) {
+      const current = backwardQueue.shift()!;
+      for (const prev of incoming.get(current) ?? []) {
+        if (!visitedBackward.has(prev)) {
+          visitedBackward.add(prev);
+          result.add(prev);
+          backwardQueue.push(prev);
+        }
+      }
+    }
+
+    return result;
+  }
+}
+
+function nodeDepartmentName(n: Vertex): string {
+  const d = n.data as { departmentName?: string | null } | undefined;
+  return d?.departmentName ?? '';
 }

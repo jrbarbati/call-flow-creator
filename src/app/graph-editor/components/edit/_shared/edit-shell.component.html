@@ -1,0 +1,13 @@
+<header class="edit-header">
+  <span class="edit-title">{{ title() }}</span>
+  <button type="button" class="edit-close" (click)="cancel.emit()" aria-label="Close">&times;</button>
+</header>
+
+<div class="edit-body">
+  <ng-content></ng-content>
+</div>
+
+<footer class="edit-footer">
+  <button type="button" class="btn btn-secondary" (click)="cancel.emit()">Cancel</button>
+  <button type="button" class="btn btn-primary" (click)="save.emit()">Save</button>
+</footer>

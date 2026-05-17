@@ -1,4 +1,5 @@
 import { NodeType } from './node-types';
+import { NodeData } from './node-data';
 
 export interface Vertex {
   id: string;
@@ -8,9 +9,12 @@ export interface Vertex {
   y: number;
   width: number;
   height: number;
+  data?: NodeData;
   meta?: Record<string, unknown>;
 }
 
+// Edges are derived from node data (each node's typed *Destination objects + IVR forwards
+// + IVR timeoutDestination / invalidKeyDestination). They are not stored in Graph state.
 export interface Edge {
   id: string;
   sourceId: string;
@@ -21,7 +25,6 @@ export interface Edge {
 
 export interface Graph {
   nodes: Vertex[];
-  edges: Edge[];
 }
 
 export interface ViewTransform {

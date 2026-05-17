@@ -1,0 +1,48 @@
+<app-edit-shell title="Edit Ring Group" (save)="onSave()" (cancel)="onCancel()">
+  <app-form-field label="Name">
+    <input type="text" [(ngModel)]="model().name" />
+  </app-form-field>
+
+  <app-form-field label="Extension Number">
+    <input type="text" [(ngModel)]="model().extensionNumber" />
+  </app-form-field>
+
+  <app-form-field label="Ring Strategy">
+    <app-select-field
+      [value]="model().ringStrategy"
+      [options]="strategies"
+      (valueChange)="model().ringStrategy = $event" />
+  </app-form-field>
+
+  <app-form-field label="Ring Time (seconds)">
+    <input type="number" [(ngModel)]="model().ringTime" min="1" />
+  </app-form-field>
+
+  <app-form-field label="Department">
+    <input type="text" [(ngModel)]="model().departmentName" />
+  </app-form-field>
+
+  <section class="dest-section">
+    @for (t of triggers; track t) {
+      <app-destination-editor
+        [trigger]="t"
+        [sourceType]="'ring-group'"
+        [value]="destinationFor(t)"
+        (valueChange)="onDestinationChange(t, $any($event))" />
+    }
+  </section>
+
+  <app-form-field label="Members">
+    <app-row-list addLabel="Add Member" (add)="onAddMember()">
+      @for (m of model().members; track $index) {
+        <div class="row-item">
+          <div class="row-fields">
+            <input type="text" placeholder="Name" [(ngModel)]="m.name" />
+            <input type="text" placeholder="Ext" [(ngModel)]="m.extensionNumber" />
+          </div>
+          <button type="button" class="row-remove" (click)="onRemoveMember($index)" aria-label="Remove">&times;</button>
+        </div>
+      }
+    </app-row-list>
+  </app-form-field>
+</app-edit-shell>

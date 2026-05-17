@@ -1,13 +1,13 @@
-import { Component, computed, inject, input, signal, NO_ERRORS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, input, NO_ERRORS_SCHEMA } from '@angular/core';
 import { GraphEditorService } from '../../graph-editor.service';
 import { Edge, Vertex } from '../../models/graph.models';
-import { RenameEdgeCommand } from '../../commands/rename-edge.command';
+import { DestinationTrigger } from '../../models/ringGroup';
+import { triggerColorFor, triggerLabelFor, TRIGGER_COLORS } from '../../models/destination';
 
 @Component({
   selector: 'g[app-graph-edge]',
   standalone: true,
-  imports: [FormsModule],
+  imports: [],
   templateUrl: './graph-edge.component.html',
   styleUrl: './graph-edge.component.scss',
   schemas: [NO_ERRORS_SCHEMA],
@@ -24,11 +24,6 @@ export class GraphEdgeComponent {
     return !this.service.highlightedEdgeIds().has(this.edge().id);
   });
 
-  protected readonly isEditingLabel = signal(false);
-  protected readonly editLabelValue = signal('');
-
-  @ViewChild('edgeLabelInput') edgeLabelInput?: ElementRef<HTMLInputElement>;
-
   private readonly endpoints = computed(() => {
     const e = this.edge();
     const nodes = this.service.nodes();
@@ -37,14 +32,32 @@ export class GraphEdgeComponent {
     return src && tgt ? { src, tgt } : null;
   });
 
+  readonly color = computed(() => {
+    const meta = this.edge().meta ?? {};
+    const kind = meta['kind'] as string | undefined;
+    if (kind === 'forward') return triggerColorFor('FORWARD');
+    if (kind === 'timeout') return triggerColorFor('TIMEOUT');
+    if (kind === 'invalidkey') return triggerColorFor('INVALID_KEY');
+    const trigger = meta['trigger'] as keyof typeof TRIGGER_COLORS | undefined;
+    return trigger ? triggerColorFor(trigger) : '#9ca3af';
+  });
+
+  readonly displayLabel = computed(() => {
+    const e = this.edge();
+    const meta = e.meta ?? {};
+    const kind = meta['kind'] as string | undefined;
+    if (kind === 'forward') return e.label ?? '';
+    if (kind === 'timeout') return 'Timeout';
+    if (kind === 'invalidkey') return 'Invalid Key';
+    const ep = this.endpoints();
+    if (!ep) return '';
+    return triggerLabelFor(ep.src.type, meta['trigger'] as DestinationTrigger);
+  });
+
   readonly pathD = computed(() => {
     const ep = this.endpoints();
     return ep ? this.bezierPath(ep.src, ep.tgt) : '';
   });
-
-  readonly markerEnd = computed(() =>
-    this.isSelected() ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'
-  );
 
   readonly labelPosition = computed(() => {
     const ep = this.endpoints();
@@ -53,8 +66,11 @@ export class GraphEdgeComponent {
     const sy = ep.src.y + ep.src.height / 2;
     const tx = ep.tgt.x;
     const ty = ep.tgt.y + ep.tgt.height / 2;
-    return { x: (sx + tx) / 2, y: (sy + ty) / 2 - 8 };
+    const t = 0.25;
+    return { x: sx + (tx - sx) * t, y: sy + (ty - sy) * t - 8 };
   });
+
+  readonly markerEnd = computed(() => this.isSelected() ? 'url(#arrowhead-selected)' : 'url(#arrowhead)');
 
   private bezierPath(src: Vertex, tgt: Vertex): string {
     const sx = src.x + src.width;
@@ -68,28 +84,5 @@ export class GraphEdgeComponent {
   onEdgeClick(event: MouseEvent): void {
     event.stopPropagation();
     this.service.selectedIds.set(new Set([this.edge().id]));
-  }
-
-  startLabelEdit(event: MouseEvent): void {
-    event.stopPropagation();
-    this.isEditingLabel.set(true);
-    this.editLabelValue.set(this.edge().label ?? '');
-    setTimeout(() => this.edgeLabelInput?.nativeElement?.focus(), 0);
-  }
-
-  confirmLabelEdit(): void {
-    if (!this.isEditingLabel()) return;
-    this.isEditingLabel.set(false);
-    const trimmed = this.editLabelValue().trim();
-    const e = this.edge();
-    if (trimmed !== (e.label ?? '')) {
-      this.service.execute(new RenameEdgeCommand(e.id, e.label ?? '', trimmed));
-    }
-  }
-
-  onLabelKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') this.confirmLabelEdit();
-    if (event.key === 'Escape') this.isEditingLabel.set(false);
-    event.stopPropagation();
   }
 }

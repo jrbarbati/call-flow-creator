@@ -12,6 +12,10 @@
         <span class="detail-type-label">{{ typeConfig()?.label }}</span>
       </div>
 
+      @if (canEdit()) {
+        <button type="button" class="detail-edit-btn" (click)="onEdit()">Edit</button>
+      }
+
       <!-- Name -->
       <div class="detail-field">
         <label class="detail-label">Name</label>
@@ -27,68 +31,47 @@
           <label class="detail-label">Extension Number</label>
           <input class="detail-input"
                  type="text"
-                 [ngModel]="n.meta?.['extensionNumber'] ?? ''"
-                 (ngModelChange)="onMetaFieldChange('extensionNumber', $event)" />
+                 [ngModel]="extensionNumber()"
+                 (ngModelChange)="onExtensionNumberChange($event)" />
         </div>
       }
 
-      <!-- Department (IVR, RG, CQ only) -->
+      <!-- Department (RG / CQ / IVR / DID) -->
       @if (n.type === 'ivr' || n.type === 'ring-group' || n.type === 'call-queue') {
         <div class="detail-field">
           <label class="detail-label">Department</label>
           <input class="detail-input"
                  type="text"
-                 [ngModel]="n.meta?.['department'] ?? ''"
-                 (ngModelChange)="onMetaFieldChange('department', $event)" />
+                 [ngModel]="departmentName()"
+                 (ngModelChange)="onDepartmentNameChange($event)" />
         </div>
       }
 
-      <!-- IVR Forwards -->
-      @if (n.type === 'ivr' && forwards().length > 0) {
+      <!-- Destinations summary -->
+      @if (destinationRows().length > 0) {
         <div class="detail-section">
-          <label class="detail-label">Forwards</label>
-          <div class="detail-forwards-list">
-            @for (fwd of forwards(); track fwd.key) {
-              <div class="detail-forward-item">
-                <span class="forward-key">{{ fwd.key }}</span>
-                <span class="forward-target">{{ fwd.targetLabel }}</span>
+          <label class="detail-label">Destinations</label>
+          <div class="detail-dest-list">
+            @for (row of destinationRows(); track row.label) {
+              <div class="detail-dest-row">
+                <span class="detail-dest-trigger">{{ row.label }}</span>
+                <span class="detail-dest-value">{{ row.value }}</span>
               </div>
             }
           </div>
         </div>
       }
 
-      <!-- Ring Group Members -->
-      @if (n.type === 'ring-group') {
+      <!-- IVR forwards (keys) -->
+      @if (n.type === 'ivr' && forwards().length > 0) {
         <div class="detail-section">
-          <label class="detail-label">Members</label>
-          <div class="detail-member-list">
-            @for (ext of extensions; track ext.number) {
-              <label class="detail-member-item">
-                <input type="checkbox"
-                       [checked]="isMember(ext.number)"
-                       (change)="toggleMember(ext.number)" />
-                <span class="member-number">{{ ext.number }}</span>
-                <span class="member-name">{{ ext.firstName }} {{ ext.lastName }}</span>
-              </label>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Call Queue Agents -->
-      @if (n.type === 'call-queue') {
-        <div class="detail-section">
-          <label class="detail-label">Agents</label>
-          <div class="detail-member-list">
-            @for (ext of extensions; track ext.number) {
-              <label class="detail-member-item">
-                <input type="checkbox"
-                       [checked]="isMember(ext.number)"
-                       (change)="toggleMember(ext.number)" />
-                <span class="member-number">{{ ext.number }}</span>
-                <span class="member-name">{{ ext.firstName }} {{ ext.lastName }}</span>
-              </label>
+          <label class="detail-label">Key Options</label>
+          <div class="detail-forwards-list">
+            @for (fwd of forwards(); track fwd.input) {
+              <div class="detail-forward-item">
+                <span class="forward-key">{{ fwd.input }}</span>
+                <span class="forward-target">{{ fwd.destination ?? '-' }}</span>
+              </div>
             }
           </div>
         </div>

@@ -2,24 +2,19 @@ import { AddNodeCommand } from './add-node.command';
 import { MoveNodeCommand } from './move-node.command';
 import { RenameNodeCommand } from './rename-node.command';
 import { DeleteNodeCommand } from './delete-node.command';
-import { AddEdgeCommand } from './add-edge.command';
-import { DeleteEdgeCommand } from './delete-edge.command';
-import { Graph, Vertex, Edge } from '../models/graph.models';
+import { Graph, Vertex } from '../models/graph.models';
 
 const node1: Vertex = { id: 'n1', type: 'sip-trunk', label: 'A', x: 10, y: 20, width: 160, height: 48 };
 const node2: Vertex = { id: 'n2', type: 'did', label: 'B', x: 200, y: 20, width: 160, height: 48 };
-const edge1: Edge = { id: 'e1', sourceId: 'n1', targetId: 'n2' };
 
-const emptyState: Graph = { nodes: [], edges: [] };
-const stateWithNodes: Graph = { nodes: [node1, node2], edges: [] };
-const stateWithEdge: Graph = { nodes: [node1, node2], edges: [edge1] };
+const emptyState: Graph = { nodes: [] };
+const stateWithNodes: Graph = { nodes: [node1, node2] };
 
 describe('AddNodeCommand', () => {
   it('adds a node on execute', () => {
     const cmd = new AddNodeCommand(node1);
     const result = cmd.execute(emptyState);
     expect(result.nodes).toEqual([node1]);
-    expect(result.edges).toEqual([]);
   });
 
   it('removes the node on undo', () => {
@@ -71,48 +66,16 @@ describe('RenameNodeCommand', () => {
 });
 
 describe('DeleteNodeCommand', () => {
-  it('removes node and its connected edges on execute', () => {
-    const cmd = new DeleteNodeCommand(node1, [edge1]);
-    const result = cmd.execute(stateWithEdge);
-    expect(result.nodes.find(n => n.id === 'n1')).toBeUndefined();
-    expect(result.edges).toEqual([]);
-  });
-
-  it('restores node and edges on undo', () => {
-    const cmd = new DeleteNodeCommand(node1, [edge1]);
-    const executed = cmd.execute(stateWithEdge);
-    const undone = cmd.undo(executed);
-    expect(undone.nodes.find(n => n.id === 'n1')).toEqual(node1);
-    expect(undone.edges).toEqual([edge1]);
-  });
-});
-
-describe('AddEdgeCommand', () => {
-  it('adds an edge on execute', () => {
-    const cmd = new AddEdgeCommand(edge1);
+  it('removes node on execute', () => {
+    const cmd = new DeleteNodeCommand(node1);
     const result = cmd.execute(stateWithNodes);
-    expect(result.edges).toEqual([edge1]);
+    expect(result.nodes.find(n => n.id === 'n1')).toBeUndefined();
   });
 
-  it('removes edge on undo', () => {
-    const cmd = new AddEdgeCommand(edge1);
+  it('restores node on undo', () => {
+    const cmd = new DeleteNodeCommand(node1);
     const executed = cmd.execute(stateWithNodes);
     const undone = cmd.undo(executed);
-    expect(undone.edges).toEqual([]);
-  });
-});
-
-describe('DeleteEdgeCommand', () => {
-  it('removes edge on execute', () => {
-    const cmd = new DeleteEdgeCommand(edge1);
-    const result = cmd.execute(stateWithEdge);
-    expect(result.edges).toEqual([]);
-  });
-
-  it('restores edge on undo', () => {
-    const cmd = new DeleteEdgeCommand(edge1);
-    const executed = cmd.execute(stateWithEdge);
-    const undone = cmd.undo(executed);
-    expect(undone.edges).toEqual([edge1]);
+    expect(undone.nodes.find(n => n.id === 'n1')).toEqual(node1);
   });
 });

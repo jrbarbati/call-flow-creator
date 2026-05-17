@@ -1,0 +1,7 @@
+@if (active(); as a) {
+  <div class="modal-backdrop" (click)="onBackdropClick()">
+    <div class="modal-frame" (click)="$event.stopPropagation()">
+      <ng-container *ngComponentOutlet="a.component; inputs: inputs()" />
+    </div>
+  </div>
+}

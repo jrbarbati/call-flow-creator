@@ -1,4 +1,5 @@
 <div class="canvas-host"
+     [class.dept-mismatch]="deptMismatch()"
      (wheel)="onWheel($event)"
      (mousedown)="startPan($event)"
      (mousemove)="onMouseMove($event)"
@@ -28,8 +29,8 @@
               [attr.height]="r.height" />
       }
 
-      <!-- Edges rendered below nodes -->
-      @for (edge of service.edges(); track edge.id) {
+      <!-- Derived edges rendered below nodes -->
+      @for (edge of service.derivedEdges(); track edge.id) {
         <g app-graph-edge [edge]="edge"></g>
       }
 
@@ -62,4 +63,16 @@
     <button class="zoom-btn" (click)="zoomOut()" title="Zoom out">−</button>
     <button class="zoom-btn zoom-fit" (click)="fitToScreen()" title="Fit to screen">⊡</button>
   </div>
+
+  @if (pendingPicker(); as p) {
+    <app-trigger-picker
+      [options]="p.options"
+      [position]="p.position"
+      (pick)="onTriggerPicked($event)"
+      (cancel)="onTriggerCancel()" />
+  }
+
+  @if (deptMismatch()) {
+    <div class="dept-mismatch-toast">Cross-department destinations not allowed</div>
+  }
 </div>

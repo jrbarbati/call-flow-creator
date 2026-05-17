@@ -1,0 +1,45 @@
+<app-edit-shell title="Edit Extension" (save)="onSave()" (cancel)="onCancel()">
+  <app-form-field label="Extension Number">
+    <input type="text" [(ngModel)]="model().num" />
+  </app-form-field>
+
+  <app-form-field label="First Name">
+    <input type="text" [(ngModel)]="model().firstName" />
+  </app-form-field>
+
+  <app-form-field label="Last Name">
+    <input type="text" [(ngModel)]="model().lastName" />
+  </app-form-field>
+
+  <app-form-field label="Email">
+    <input type="email"
+      [ngModel]="model().email ?? ''"
+      (ngModelChange)="model().email = $event || null" />
+  </app-form-field>
+
+  <app-form-field label="Mobile">
+    <input type="text" [(ngModel)]="model().mobile" />
+  </app-form-field>
+
+  <app-form-field label="Outbound Caller ID">
+    <input type="text"
+      [ngModel]="model().outboundCallerId ?? ''"
+      (ngModelChange)="model().outboundCallerId = $event || null" />
+  </app-form-field>
+
+  <app-form-field label="Main Department">
+    <input type="text" [(ngModel)]="model().mainDepartmentName" />
+  </app-form-field>
+
+  <app-form-field label="Voicemail Enabled">
+    <input type="checkbox" [(ngModel)]="model().voicemailEnabled" />
+  </app-form-field>
+
+  <app-form-field label="Disable Extension">
+    <input type="checkbox" [(ngModel)]="model().disableExtension" />
+  </app-form-field>
+
+  <app-form-field label="Hide User">
+    <input type="checkbox" [(ngModel)]="model().hideUser" />
+  </app-form-field>
+</app-edit-shell>

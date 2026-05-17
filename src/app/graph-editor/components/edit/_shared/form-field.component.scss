@@ -1,0 +1,43 @@
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field-label {
+  font-family: var(--palette-label-font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--palette-label);
+  text-transform: uppercase;
+}
+
+::ng-deep .form-field input[type="text"],
+::ng-deep .form-field input[type="number"],
+::ng-deep .form-field input[type="email"],
+::ng-deep .form-field select,
+::ng-deep .form-field textarea {
+  background: var(--palette-item-bg);
+  border: 1px solid var(--palette-item-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--node-label-font);
+  font-size: 12px;
+  color: var(--node-label-color);
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+::ng-deep .form-field input:focus,
+::ng-deep .form-field select:focus,
+::ng-deep .form-field textarea:focus {
+  border-color: var(--accent);
+}
+
+::ng-deep .form-field input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}

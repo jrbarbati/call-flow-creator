@@ -105,11 +105,16 @@
 
     <!-- Port handle — right edge center (only for types with output) -->
     @if (hasOutputPort()) {
-      <svg:circle class="port-handle"
-              [attr.cx]="n.width + 8"
-              [attr.cy]="n.height / 2"
-              r="6"
-              (mousedown)="onPortMouseDown($event)" />
+      <svg:g class="port-handle-group" (mousedown)="onPortMouseDown($event)">
+        <svg:circle class="port-hit-area"
+                [attr.cx]="n.width + 6"
+                [attr.cy]="n.height / 2"
+                r="14" />
+        <svg:circle class="port-handle"
+                [attr.cx]="n.width + 6"
+                [attr.cy]="n.height / 2"
+                r="6" />
+      </svg:g>
     }
   }
 </svg:g>

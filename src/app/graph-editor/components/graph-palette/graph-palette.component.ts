@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import {
-  NODE_TYPE_CONFIGS, NodeType, EXTENSIONS, ExtensionEntry
+  NODE_TYPE_CONFIGS, NODE_TYPES, NodeType, NodeTypeConfig, EXTENSIONS, ExtensionEntry,
 } from '../../models/node-types';
 
 @Component({
@@ -10,9 +10,13 @@ import {
   styleUrl: './graph-palette.component.scss',
 })
 export class GraphPaletteComponent {
-  readonly componentTypes = (
-    ['sip-trunk', 'did', 'ivr', 'ring-group', 'call-queue'] as NodeType[]
-  ).map(type => NODE_TYPE_CONFIGS[type]);
+  readonly callFlowTypes: NodeTypeConfig[] = NODE_TYPES
+    .map(t => NODE_TYPE_CONFIGS[t])
+    .filter(c => c.paletteSection === 'call-flow' && c.type !== 'extension');
+
+  readonly destinationTypes: NodeTypeConfig[] = NODE_TYPES
+    .map(t => NODE_TYPE_CONFIGS[t])
+    .filter(c => c.paletteSection === 'destinations');
 
   readonly extensions = EXTENSIONS;
 

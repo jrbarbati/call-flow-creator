@@ -1,0 +1,60 @@
+<div class="dest-editor">
+  <div class="dest-editor-header">
+    <span class="dest-editor-dot" [style.background]="triggerColor()"></span>
+    <span class="dest-editor-trigger">{{ triggerLabel() }}</span>
+  </div>
+
+  <app-form-field label="Type">
+    <app-select-field
+      [value]="currentKind()"
+      [options]="kindOptions"
+      (valueChange)="onKindChange($event)" />
+  </app-form-field>
+
+  @switch (currentKind()) {
+    @case ('Extension') {
+      <app-form-field label="Extension">
+        <app-select-field
+          [value]="value().extensionNumber ?? ''"
+          [options]="extensionOptions()"
+          (valueChange)="onExtensionChange($event)" />
+      </app-form-field>
+    }
+    @case ('VoiceMail') {
+      <app-form-field label="Voicemail of Extension">
+        <app-select-field
+          [value]="value().extensionNumber ?? ''"
+          [options]="extensionOptions()"
+          (valueChange)="onExtensionChange($event)" />
+      </app-form-field>
+    }
+    @case ('VoiceApp') {
+      <app-form-field label="Call Processing Script Name">
+        <input type="text"
+               [ngModel]="value().name ?? ''"
+               (ngModelChange)="onCallProcessingScriptNameChange($event)" />
+      </app-form-field>
+    }
+    @case ('External') {
+      <app-form-field label="External Number">
+        <input type="text"
+               [ngModel]="value().external ?? ''"
+               (ngModelChange)="onExternalChange($event)" />
+      </app-form-field>
+    }
+  }
+
+  @if (currentKind() !== 'None' && currentKind() !== 'ProceedWithNoExceptions') {
+    <app-form-field label="Prompt (optional)">
+      <input type="text"
+             [ngModel]="value().prompt ?? ''"
+             (ngModelChange)="onPromptChange($event)" />
+    </app-form-field>
+    <label class="dest-editor-prompt-toggle">
+      <input type="checkbox"
+             [ngModel]="value().promptEnabled"
+             (ngModelChange)="onPromptEnabledChange($event)" />
+      <span>Play prompt before transfer</span>
+    </label>
+  }
+</div>

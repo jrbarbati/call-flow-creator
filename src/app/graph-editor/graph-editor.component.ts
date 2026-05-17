@@ -10,13 +10,17 @@ import { Graph, Vertex } from './models/graph.models';
 import { NODE_TYPE_CONFIGS, NodeType } from './models/node-types';
 import { AddNodeCommand } from './commands/add-node.command';
 import { DeleteNodeCommand } from './commands/delete-node.command';
-import { DeleteEdgeCommand } from './commands/delete-edge.command';
+import { SetDestinationCommand } from './commands/set-destination.command';
+import { ModalService } from './services/modal.service';
+import { ModalOutletComponent } from './components/modal-outlet/modal-outlet.component';
+import { createDefaultNodeData } from './models/node-data.factory';
+import { parseEdgeId, edgeIdToSlot } from './models/destination';
 
 @Component({
   selector: 'app-graph-editor',
   standalone: true,
-  imports: [GraphCanvasComponent, GraphPaletteComponent, GraphDetailPanelComponent, GraphFilterBarComponent],
-  providers: [GraphEditorService],
+  imports: [GraphCanvasComponent, GraphPaletteComponent, GraphDetailPanelComponent, GraphFilterBarComponent, ModalOutletComponent],
+  providers: [GraphEditorService, ModalService],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
@@ -27,23 +31,17 @@ export class GraphEditorComponent {
   protected readonly service = inject(GraphEditorService);
 
   constructor() {
-    // External graph input → load into service. Wrapped in untracked so we don't
-    // pick up downstream signal reads as dependencies.
     effect(() => {
       const g = this.graph();
       untracked(() => this.service.loadGraph(g));
     });
 
-    // Sync emit on every command (including those triggered from child
-    // components). Effect-based watching would be async, which breaks callers
-    // that expect graphChange immediately after service.execute returns.
     this.service.setCommandListener(() => this.emitGraph());
   }
 
   private emitGraph(): void {
     this.graphChange.emit({
       nodes: [...this.service.nodes()],
-      edges: [...this.service.edges()],
     });
   }
 
@@ -83,7 +81,8 @@ export class GraphEditorComponent {
       event.clientY - rect.top
     );
 
-    let label = NODE_TYPE_CONFIGS[type].label;
+    const config = NODE_TYPE_CONFIGS[type];
+    let label = config.label;
     let meta: Record<string, unknown> | undefined;
 
     if (type === 'extension') {
@@ -95,23 +94,29 @@ export class GraphEditorComponent {
       }
     }
 
-    const config = NODE_TYPE_CONFIGS[type];
     if (config.hasExtensionNumber && !meta?.['extensionNumber']) {
       const extNum = this.service.assignExtensionNumber();
       meta = { ...(meta || {}), extensionNumber: extNum };
     }
 
-    const nodeHeight = NODE_TYPE_CONFIGS[type].hasExtensionNumber ? 75 : 59;
+    const nodeHeight = config.isTerminal ? 36 : (config.hasExtensionNumber ? 75 : 59);
+    const width = config.isTerminal ? 120 : 160;
     const node: Vertex = {
       id: crypto.randomUUID(),
       type,
       label,
-      x: this.service.snapToGrid(raw.x - 80),
+      x: this.service.snapToGrid(raw.x - width / 2),
       y: this.service.snapToGrid(raw.y - nodeHeight / 2),
-      width: 160,
+      width,
       height: nodeHeight,
       ...(meta ? { meta } : {}),
     };
+    node.data = createDefaultNodeData(type, {
+      label: node.label,
+      extensionNumber: meta?.['extensionNumber'] as string | undefined,
+      firstName: meta?.['firstName'] as string | undefined,
+      lastName: meta?.['lastName'] as string | undefined,
+    });
     this.service.execute(new AddNodeCommand(node));
   }
 
@@ -120,12 +125,13 @@ export class GraphEditorComponent {
     for (const id of selected) {
       const node = this.service.nodes().find(n => n.id === id);
       if (node) {
-        const connected = this.service.connectedEdges(id);
-        this.service.execute(new DeleteNodeCommand(node, connected));
+        this.service.execute(new DeleteNodeCommand(node));
+        continue;
       }
-      const edge = this.service.edges().find(e => e.id === id);
-      if (edge) {
-        this.service.execute(new DeleteEdgeCommand(edge));
+      const parsed = parseEdgeId(id);
+      if (parsed) {
+        const slot = edgeIdToSlot(parsed);
+        this.service.execute(new SetDestinationCommand(parsed.sourceId, slot, { kind: 'clear' }));
       }
     }
     this.service.selectedIds.set(new Set());

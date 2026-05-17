@@ -1,4 +1,3 @@
-@let e = edge();
 @let lp = labelPosition();
 <!-- Invisible wide hit area for easy clicking -->
 <svg:path class="edge-hit-area"
@@ -12,40 +11,26 @@
       [class.is-selected]="isSelected()"
       [class.is-dimmed]="isDimmed()"
       [attr.d]="pathD()"
+      [attr.stroke]="color()"
       [attr.marker-end]="markerEnd()"
       fill="none"
       (click)="onEdgeClick($event)" />
 
 <!-- Edge label -->
-@if (e.label && lp && !isEditingLabel() && !isDimmed()) {
+@if (displayLabel() && lp && !isDimmed()) {
   <svg:g [attr.transform]="'translate(' + lp.x + ',' + lp.y + ')'">
     <svg:rect class="edge-label-bg"
-          x="-12" y="-10"
-          width="24" height="20"
+          [attr.x]="-(displayLabel().length * 3.2) - 6"
+          y="-10"
+          [attr.width]="(displayLabel().length * 6.4) + 12"
+          height="20"
           rx="4" />
     <svg:text class="edge-label-text"
           x="0" y="1"
           text-anchor="middle"
           dominant-baseline="middle"
-          (dblclick)="startLabelEdit($event)">
-      {{ e.label }}
+          [attr.fill]="color()">
+      {{ displayLabel() }}
     </svg:text>
   </svg:g>
-}
-
-<!-- Edge label edit mode -->
-@if (isEditingLabel() && lp) {
-  <svg:foreignObject
-        [attr.x]="lp.x - 20"
-        [attr.y]="lp.y - 12"
-        width="40" height="24">
-    <input #edgeLabelInput
-           class="edge-label-input"
-           type="text"
-           [ngModel]="editLabelValue()"
-           (ngModelChange)="editLabelValue.set($event)"
-           (blur)="confirmLabelEdit()"
-           (keydown)="onLabelKeydown($event)"
-           (mousedown)="$event.stopPropagation()" />
-  </svg:foreignObject>
 }

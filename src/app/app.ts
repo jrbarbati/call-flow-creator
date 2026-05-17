@@ -1,6 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
-import { GraphEditorComponent, Graph } from './graph-editor';
+import { GraphEditorComponent, Graph, Vertex } from './graph-editor';
 import { ThemeService } from './theme.service';
+import { createDefaultNodeData } from './graph-editor/models/node-data.factory';
+import { RingGroup, RingGroupMember } from './graph-editor/models/ringGroup';
+import { CallQueue, CallQueueAgent } from './graph-editor/models/callQueue';
+import { Ivr, IvrForward } from './graph-editor/models/ivr';
+import { DidNumber } from './graph-editor/models/didNumber';
+import { SipTrunk } from './graph-editor/models/sipTrunk';
+import { Extension } from './graph-editor/models/extension';
 
 @Component({
   selector: 'app-root',
@@ -17,318 +24,259 @@ export class App {
     this.graph.set(g);
   }
 
+  // ---------------------------------------------------------------------------
+  // Fake setup
+  //
+  // Modeled after a real PBX:
+  //   - A SIP Trunk has a main `externalNumber` (its primary DID) and a list of
+  //     `didNumbers` assigned to the trunk. The trunk fans out to a DID node for
+  //     each assigned number.
+  //   - Each DID may set its own `destinationOfficeHours`. When that slot is
+  //     empty (null/undefined or a placeholder with no toValue and no target),
+  //     the DID inherits the trunk's `defaultRoute` for office hours.
+  //   - IVRs use menu `forwards` plus officeClosed/Break/Holiday destinations.
+  //   - RG/CQ use noAnswer / officeClosed / Break / Holiday destinations.
+  //
+  // Edges are derived from these typed fields by EdgeDerivationService.
+  // ---------------------------------------------------------------------------
   private buildTestData(): Graph {
-    const nodes = [
-      // === FLOW 1: Sales Inbound (Sales dept) ===
-      // SIP Trunk → DID → IVR → RG / CQ → Extensions
-      {
-        id: 'trunk-1',
-        type: 'sip-trunk' as const,
-        label: 'Comcast SIP',
-        x: 40,
-        y: 80,
-        width: 160,
-        height: 59,
-        meta: { department: 'Sales' },
-      },
-      {
-        id: 'did-1',
-        type: 'did' as const,
-        label: '(800) 555-0100',
-        x: 280,
-        y: 80,
-        width: 160,
-        height: 59,
-        meta: { department: 'Sales' },
-      },
-      {
-        id: 'ivr-1',
-        type: 'ivr' as const,
-        label: 'Sales Menu',
-        x: 520,
-        y: 80,
-        width: 160,
-        height: 75,
-        meta: { department: 'Sales', extensionNumber: '800' },
-      },
-      {
-        id: 'rg-1',
-        type: 'ring-group' as const,
-        label: 'Sales Floor',
-        x: 780,
-        y: 10,
-        width: 160,
-        height: 75,
-        meta: { department: 'Sales', extensionNumber: '801', members: ['100', '101', '102'] },
-      },
-      {
-        id: 'cq-1',
-        type: 'call-queue' as const,
-        label: 'Sales Overflow',
-        x: 780,
-        y: 160,
-        width: 160,
-        height: 75,
-        meta: { department: 'Sales', extensionNumber: '802', members: ['100', '103'] },
-      },
-      {
-        id: 'ext-100',
-        type: 'extension' as const,
-        label: '100 - John Smith',
-        x: 1040,
-        y: 0,
-        width: 160,
-        height: 75,
-        meta: { extensionNumber: '100', firstName: 'John', lastName: 'Smith', department: 'Sales' },
-      },
-      {
-        id: 'ext-101',
-        type: 'extension' as const,
-        label: '101 - Jane Doe',
-        x: 1040,
-        y: 90,
-        width: 160,
-        height: 75,
-        meta: { extensionNumber: '101', firstName: 'Jane', lastName: 'Doe', department: 'Sales' },
-      },
-      {
-        id: 'ext-102',
-        type: 'extension' as const,
-        label: '102 - Mike Johnson',
-        x: 1040,
-        y: 180,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '102',
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          department: 'Sales',
-        },
-      },
-      {
-        id: 'ext-103',
-        type: 'extension' as const,
-        label: '103 - Sarah Williams',
-        x: 1040,
-        y: 270,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '103',
-          firstName: 'Sarah',
-          lastName: 'Williams',
-          department: 'Sales',
-        },
-      },
+    const nodes: Vertex[] = [];
 
-      // === FLOW 2: Sales After-Hours (Sales dept — same department as Flow 1) ===
-      // SIP Trunk → DID → CQ → Extensions
-      {
-        id: 'trunk-2',
-        type: 'sip-trunk' as const,
-        label: 'AT&T SIP',
-        x: 40,
-        y: 450,
-        width: 160,
-        height: 59,
-        meta: { department: 'Sales' },
-      },
-      {
-        id: 'did-2',
-        type: 'did' as const,
-        label: '(800) 555-0101',
-        x: 280,
-        y: 450,
-        width: 160,
-        height: 59,
-        meta: { department: 'Sales' },
-      },
-      {
-        id: 'cq-2',
-        type: 'call-queue' as const,
-        label: 'After-Hours Sales',
-        x: 520,
-        y: 450,
-        width: 160,
-        height: 75,
-        meta: { department: 'Sales', extensionNumber: '803', members: ['103', '104'] },
-      },
-      {
-        id: 'ext-104',
-        type: 'extension' as const,
-        label: '104 - David Brown',
-        x: 780,
-        y: 420,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '104',
-          firstName: 'David',
-          lastName: 'Brown',
-          department: 'Sales',
-        },
-      },
+    // === Sales department =====================================================
+    nodes.push(sipTrunk('trunk-sales', 'Comcast SIP', 40, 110, 'Sales', {
+      externalNumber: '+18005550100',
+      didNumbers:     ['+18005550100', '+18005550150', '+18005550151'],
+      defaultRouteExt: '800', // every DID without its own routing → Sales Menu IVR
+    }));
 
-      // === FLOW 3: Technical Support (Support dept) ===
-      // SIP Trunk → DID → IVR → RG (Tier 1) / CQ (Tier 2) → Extensions
-      {
-        id: 'trunk-3',
-        type: 'sip-trunk' as const,
-        label: 'Lumen SIP',
-        x: 40,
-        y: 700,
-        width: 160,
-        height: 59,
-        meta: { department: 'Support' },
-      },
-      {
-        id: 'did-3',
-        type: 'did' as const,
-        label: '(800) 555-0200',
-        x: 280,
-        y: 700,
-        width: 160,
-        height: 59,
-        meta: { department: 'Support' },
-      },
-      {
-        id: 'ivr-2',
-        type: 'ivr' as const,
-        label: 'Support Menu',
-        x: 520,
-        y: 700,
-        width: 160,
-        height: 75,
-        meta: { department: 'Support', extensionNumber: '810' },
-      },
-      {
-        id: 'rg-2',
-        type: 'ring-group' as const,
-        label: 'Tier 1 Support',
-        x: 780,
-        y: 630,
-        width: 160,
-        height: 75,
-        meta: { department: 'Support', extensionNumber: '811', members: ['105', '106', '107'] },
-      },
-      {
-        id: 'cq-3',
-        type: 'call-queue' as const,
-        label: 'Tier 2 Escalation',
-        x: 780,
-        y: 780,
-        width: 160,
-        height: 75,
-        meta: { department: 'Support', extensionNumber: '812', members: ['108', '109'] },
-      },
-      {
-        id: 'ext-105',
-        type: 'extension' as const,
-        label: '105 - Emily Davis',
-        x: 1040,
-        y: 580,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '105',
-          firstName: 'Emily',
-          lastName: 'Davis',
-          department: 'Support',
-        },
-      },
-      {
-        id: 'ext-106',
-        type: 'extension' as const,
-        label: '106 - Chris Miller',
-        x: 1040,
-        y: 670,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '106',
-          firstName: 'Chris',
-          lastName: 'Miller',
-          department: 'Support',
-        },
-      },
-      {
-        id: 'ext-107',
-        type: 'extension' as const,
-        label: '107 - Lisa Wilson',
-        x: 1040,
-        y: 760,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '107',
-          firstName: 'Lisa',
-          lastName: 'Wilson',
-          department: 'Support',
-        },
-      },
-      {
-        id: 'ext-108',
-        type: 'extension' as const,
-        label: '108 - Tom Moore',
-        x: 1040,
-        y: 850,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '108',
-          firstName: 'Tom',
-          lastName: 'Moore',
-          department: 'Support',
-        },
-      },
-      {
-        id: 'ext-109',
-        type: 'extension' as const,
-        label: '109 - Amy Taylor',
-        x: 1040,
-        y: 940,
-        width: 160,
-        height: 75,
-        meta: {
-          extensionNumber: '109',
-          firstName: 'Amy',
-          lastName: 'Taylor',
-          department: 'Support',
-        },
-      },
-    ];
+    // Main trunk number — inherits trunk default route.
+    nodes.push(did('did-sales-main',   '+18005550100', 280,  30, 'Sales',
+      { sipTrunkName: 'Comcast SIP' }));
+    // Additional trunk DIDs — one inherits, one overrides to a direct extension.
+    nodes.push(did('did-sales-general', '+18005550150', 280, 110, 'Sales',
+      { sipTrunkName: 'Comcast SIP' }));
+    nodes.push(did('did-sales-jane',    '+18005550151', 280, 190, 'Sales',
+      { sipTrunkName: 'Comcast SIP', officeHoursExt: '101' })); // direct-dial to Jane
 
-    const edges = [
-      // Flow 1: Sales Inbound
-      { id: 'e1', sourceId: 'trunk-1', targetId: 'did-1' },
-      { id: 'e2', sourceId: 'did-1', targetId: 'ivr-1' },
-      { id: 'e3', sourceId: 'ivr-1', targetId: 'rg-1', label: '1' },
-      { id: 'e4', sourceId: 'ivr-1', targetId: 'cq-1', label: '2' },
-      { id: 'e5', sourceId: 'rg-1', targetId: 'ext-100' },
-      { id: 'e6', sourceId: 'rg-1', targetId: 'ext-101' },
-      { id: 'e7', sourceId: 'rg-1', targetId: 'ext-102' },
-      { id: 'e8', sourceId: 'cq-1', targetId: 'ext-100' },
-      { id: 'e9', sourceId: 'cq-1', targetId: 'ext-103' },
+    nodes.push(ivr('ivr-sales', 'Sales Menu', 540, 110, 'Sales', '800', [
+      { key: '1', extensionNumber: '801' }, // Sales Floor RG
+      { key: '2', extensionNumber: '802' }, // Sales Overflow CQ
+    ]));
 
-      // Flow 2: Sales After-Hours
-      { id: 'e10', sourceId: 'trunk-2', targetId: 'did-2' },
-      { id: 'e11', sourceId: 'did-2', targetId: 'cq-2' },
-      { id: 'e12', sourceId: 'cq-2', targetId: 'ext-103' },
-      { id: 'e13', sourceId: 'cq-2', targetId: 'ext-104' },
+    nodes.push(ringGroup('rg-sales', 'Sales Floor', 800, 30, 'Sales', '801',
+      [m('100', 'John Smith'), m('101', 'Jane Doe'), m('102', 'Mike Johnson')],
+      { noAnswerExt: '802' }, // overflow → CQ
+    ));
 
-      // Flow 3: Support
-      { id: 'e14', sourceId: 'trunk-3', targetId: 'did-3' },
-      { id: 'e15', sourceId: 'did-3', targetId: 'ivr-2' },
-      { id: 'e16', sourceId: 'ivr-2', targetId: 'rg-2', label: '1' },
-      { id: 'e17', sourceId: 'ivr-2', targetId: 'cq-3', label: '2' },
-      { id: 'e18', sourceId: 'rg-2', targetId: 'ext-105' },
-      { id: 'e19', sourceId: 'rg-2', targetId: 'ext-106' },
-      { id: 'e20', sourceId: 'rg-2', targetId: 'ext-107' },
-      { id: 'e21', sourceId: 'cq-3', targetId: 'ext-108' },
-      { id: 'e22', sourceId: 'cq-3', targetId: 'ext-109' },
-    ];
+    nodes.push(callQueue('cq-sales', 'Sales Overflow', 800, 160, 'Sales', '802',
+      [a('100', 'John Smith'), a('103', 'Sarah Williams')],
+      { noAnswerExt: '100' },
+    ));
 
-    return { nodes, edges };
+    nodes.push(extension('ext-100', '100', 'John',  'Smith',    'Sales', 1060,   0));
+    nodes.push(extension('ext-101', '101', 'Jane',  'Doe',      'Sales', 1060,  90));
+    nodes.push(extension('ext-102', '102', 'Mike',  'Johnson',  'Sales', 1060, 180));
+    nodes.push(extension('ext-103', '103', 'Sarah', 'Williams', 'Sales', 1060, 270));
+
+    // === Support department ===================================================
+    nodes.push(sipTrunk('trunk-support', 'Lumen SIP', 40, 600, 'Support', {
+      externalNumber: '+18005550200',
+      didNumbers:     ['+18005550200', '+18005550250'],
+      defaultRouteExt: '810', // every DID without its own routing → Support Menu IVR
+    }));
+
+    nodes.push(did('did-support-main',    '+18005550200', 280, 540, 'Support',
+      { sipTrunkName: 'Lumen SIP' }));
+    nodes.push(did('did-support-hotline', '+18005550250', 280, 620, 'Support',
+      { sipTrunkName: 'Lumen SIP', officeHoursExt: '812' })); // direct hotline → Tier 2
+
+    nodes.push(ivr('ivr-support', 'Support Menu', 540, 600, 'Support', '810', [
+      { key: '1', extensionNumber: '811' }, // Tier 1 RG
+      { key: '2', extensionNumber: '812' }, // Tier 2 CQ
+    ]));
+
+    nodes.push(ringGroup('rg-tier1', 'Tier 1 Support', 800, 510, 'Support', '811',
+      [m('105', 'Emily Davis'), m('106', 'Chris Miller'), m('107', 'Lisa Wilson')],
+      { noAnswerExt: '812' }, // escalate → Tier 2
+    ));
+
+    nodes.push(callQueue('cq-tier2', 'Tier 2 Escalation', 800, 650, 'Support', '812',
+      [a('108', 'Tom Moore'), a('109', 'Amy Taylor')],
+      { noAnswerExt: '108' },
+    ));
+
+    nodes.push(extension('ext-105', '105', 'Emily', 'Davis',  'Support', 1060, 480));
+    nodes.push(extension('ext-106', '106', 'Chris', 'Miller', 'Support', 1060, 570));
+    nodes.push(extension('ext-107', '107', 'Lisa',  'Wilson', 'Support', 1060, 660));
+    nodes.push(extension('ext-108', '108', 'Tom',   'Moore',  'Support', 1060, 750));
+    nodes.push(extension('ext-109', '109', 'Amy',   'Taylor', 'Support', 1060, 840));
+
+    return { nodes };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Vertex builders — typed node.data, edges derived by EdgeDerivationService.
+// ---------------------------------------------------------------------------
+
+interface SipTrunkOpts {
+  externalNumber: string;
+  didNumbers: string[];
+  defaultRouteExt?: string;
+}
+
+function sipTrunk(
+  id: string, name: string, x: number, y: number, dept: string, opts: SipTrunkOpts,
+): Vertex {
+  const data = createDefaultNodeData('sip-trunk', { label: name }) as SipTrunk;
+  data.externalNumber = opts.externalNumber;
+  data.number = opts.externalNumber;
+  data.didNumbers = [...opts.didNumbers];
+  if (opts.defaultRouteExt) {
+    data.defaultRoute.toValue = 'Extension';
+    data.defaultRoute.extensionNumber = opts.defaultRouteExt;
+    data.defaultRoute.targetType = 'Extension';
+  } else {
+    clearDestination(data.defaultRoute);
+  }
+  data.destinations = [data.defaultRoute];
+  return vertex(id, 'sip-trunk', name, x, y, false, data, dept);
+}
+
+interface DidOpts {
+  sipTrunkName?: string;
+  officeHoursExt?: string; // when omitted, the DID inherits the trunk's defaultRoute
+}
+
+function did(id: string, number: string, x: number, y: number, dept: string, opts: DidOpts = {}): Vertex {
+  const data = createDefaultNodeData('did', { label: number }) as DidNumber;
+  data.number = number;
+  if (opts.officeHoursExt) {
+    data.destinationOfficeHours.toValue = 'Extension';
+    data.destinationOfficeHours.extensionNumber = opts.officeHoursExt;
+    data.destinationOfficeHours.targetType = 'Extension';
+  } else {
+    clearDestination(data.destinationOfficeHours);
+  }
+  clearDestination(data.destinationOfficeClosed);
+  clearDestination(data.destinationHoliday);
+  if (opts.sipTrunkName) {
+    (data as unknown as { phoneSystemName: string }).phoneSystemName = opts.sipTrunkName;
+  }
+  return vertex(id, 'did', number, x, y, false, data, dept);
+}
+
+function ivr(
+  id: string, name: string, x: number, y: number, dept: string,
+  extensionNumber: string,
+  forwards: Array<{ key: string; extensionNumber: string }>,
+): Vertex {
+  const data = createDefaultNodeData('ivr', { label: name, extensionNumber }) as Ivr;
+  data.departmentName = dept;
+  clearDestination(data.destinationOfficeClosed);
+  clearDestination(data.destinationBreak);
+  clearDestination(data.destinationHoliday);
+  data.forwards = forwards.map<IvrForward>(f => ({
+    id: null, ivrId: null,
+    type: 'Extension',
+    input: f.key,
+    peerType: null,
+    destination: `Extension:${f.extensionNumber}`,
+    tcxId: null,
+    customData: null,
+  }));
+  return vertex(id, 'ivr', name, x, y, true, data, dept);
+}
+
+function ringGroup(
+  id: string, name: string, x: number, y: number, dept: string,
+  extensionNumber: string,
+  members: RingGroupMember[],
+  opts: { noAnswerExt?: string },
+): Vertex {
+  const data = createDefaultNodeData('ring-group', { label: name, extensionNumber }) as RingGroup;
+  data.departmentName = dept;
+  data.members = members;
+  if (opts.noAnswerExt) {
+    data.destinationNoAnswer.toValue = 'Extension';
+    data.destinationNoAnswer.extensionNumber = opts.noAnswerExt;
+    data.destinationNoAnswer.targetType = 'Extension';
+  } else {
+    clearDestination(data.destinationNoAnswer);
+  }
+  clearDestination(data.destinationOfficeClosed);
+  clearDestination(data.destinationBreak);
+  clearDestination(data.destinationHoliday);
+  return vertex(id, 'ring-group', name, x, y, true, data, dept);
+}
+
+function callQueue(
+  id: string, name: string, x: number, y: number, dept: string,
+  extensionNumber: string,
+  agents: CallQueueAgent[],
+  opts: { noAnswerExt?: string },
+): Vertex {
+  const data = createDefaultNodeData('call-queue', { label: name, extensionNumber }) as CallQueue;
+  data.departmentName = dept;
+  data.agents = agents;
+  if (opts.noAnswerExt) {
+    data.destinationNoAnswer.toValue = 'Extension';
+    data.destinationNoAnswer.extensionNumber = opts.noAnswerExt;
+    data.destinationNoAnswer.targetType = 'Extension';
+  } else {
+    clearDestination(data.destinationNoAnswer);
+  }
+  clearDestination(data.destinationOfficeClosed);
+  clearDestination(data.destinationBreak);
+  clearDestination(data.destinationHoliday);
+  return vertex(id, 'call-queue', name, x, y, true, data, dept);
+}
+
+function extension(
+  id: string, extensionNumber: string, firstName: string, lastName: string,
+  dept: string, x: number, y: number,
+): Vertex {
+  const data = createDefaultNodeData('extension', { extensionNumber, firstName, lastName }) as Extension;
+  data.mainDepartmentName = dept;
+  // Mirror onto the generic field used by graph filters.
+  (data as unknown as { departmentName: string }).departmentName = dept;
+  const label = `${extensionNumber} - ${firstName} ${lastName}`;
+  return vertex(id, 'extension', label, x, y, true, data, dept);
+}
+
+function vertex(
+  id: string, type: Vertex['type'], label: string, x: number, y: number,
+  hasExtensionNumber: boolean, data: Vertex['data'], dept: string,
+): Vertex {
+  return {
+    id, type, label, x, y,
+    width: 160,
+    height: hasExtensionNumber ? 75 : 59,
+    data,
+    meta: { department: dept },
+  };
+}
+
+function m(extensionNumber: string, name: string): RingGroupMember {
+  return { id: null, ringGroupId: null, name, extensionNumber };
+}
+
+function a(extensionNumber: string, name: string): CallQueueAgent {
+  return { id: null, callQueueId: null, tcxId: null, name, extensionNumber, skillGroup: '' };
+}
+
+// Wipe a destination slot so it counts as "empty" for EdgeDerivationService —
+// no edge is drawn and no end-call terminal is auto-spawned.
+function clearDestination(d: {
+  toValue: string | null;
+  extensionNumber: string | null;
+  external: string | null;
+  name: string | null;
+  targetType: string | null;
+}): void {
+  d.toValue = null;
+  d.extensionNumber = null;
+  d.external = null;
+  d.name = null;
+  d.targetType = null;
 }

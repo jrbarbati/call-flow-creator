@@ -42,7 +42,7 @@ export class GraphFilterBarComponent {
   protected readonly allDepartments = computed(() => {
     const depts = new Set<string>();
     for (const n of this.service.nodes()) {
-      const d = (n.meta?.['department'] as string) ?? '';
+      const d = (n.data as { departmentName?: string | null } | undefined)?.departmentName ?? '';
       if (d) depts.add(d);
     }
     return [...depts].sort();
@@ -65,7 +65,8 @@ export class GraphFilterBarComponent {
     if (!search) return nodes;
     return nodes.filter((n) => {
       const label = n.label.toLowerCase();
-      const ext = ((n.meta?.['extensionNumber'] as string) ?? '').toLowerCase();
+      const data = n.data as { extensionNumber?: string; num?: string } | undefined;
+      const ext = (data?.extensionNumber ?? data?.num ?? '').toLowerCase();
       return label.includes(search) || ext.includes(search);
     });
   }

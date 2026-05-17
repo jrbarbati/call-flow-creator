@@ -1,0 +1,53 @@
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+::ng-deep .row-list .row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--palette-item-bg);
+  border: 1px solid var(--palette-item-border);
+  border-radius: 4px;
+}
+
+::ng-deep .row-list .row-item > .row-fields {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+::ng-deep .row-list .row-item .row-remove {
+  background: none;
+  border: none;
+  color: var(--palette-label);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+::ng-deep .row-list .row-item .row-remove:hover {
+  color: #ef4444;
+}
+
+.row-add {
+  align-self: flex-start;
+  background: var(--palette-item-bg);
+  border: 1px dashed var(--palette-item-border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: var(--palette-label);
+  font-family: var(--palette-label-font);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.row-add:hover {
+  border-color: var(--accent);
+  color: var(--node-label-color);
+}

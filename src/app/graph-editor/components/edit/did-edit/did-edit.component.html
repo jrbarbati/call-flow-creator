@@ -1,0 +1,19 @@
+<app-edit-shell title="Edit DID" (save)="onSave()" (cancel)="onCancel()">
+  <app-form-field label="Number">
+    <input type="text" [(ngModel)]="model().number" />
+  </app-form-field>
+
+  <app-form-field label="Display Name">
+    <input type="text" [(ngModel)]="model().displayName" />
+  </app-form-field>
+
+  <section class="dest-section">
+    @for (t of triggers; track t) {
+      <app-destination-editor
+        [trigger]="t"
+        [sourceType]="'did'"
+        [value]="destinationFor(t)"
+        (valueChange)="onDestinationChange(t, $any($event))" />
+    }
+  </section>
+</app-edit-shell>

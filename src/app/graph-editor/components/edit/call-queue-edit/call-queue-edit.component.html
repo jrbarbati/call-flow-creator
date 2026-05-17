@@ -1,0 +1,53 @@
+<app-edit-shell title="Edit Call Queue" (save)="onSave()" (cancel)="onCancel()">
+  <app-form-field label="Name">
+    <input type="text" [(ngModel)]="model().name" />
+  </app-form-field>
+
+  <app-form-field label="Extension Number">
+    <input type="text" [(ngModel)]="model().extensionNumber" />
+  </app-form-field>
+
+  <app-form-field label="Polling Strategy">
+    <app-select-field
+      [value]="model().pollingStrategy"
+      [options]="strategies"
+      (valueChange)="model().pollingStrategy = $event" />
+  </app-form-field>
+
+  <app-form-field label="Ring Timeout (seconds)">
+    <input type="number" [(ngModel)]="model().ringTimeout" min="1" />
+  </app-form-field>
+
+  <app-form-field label="Max Queue Wait Time (seconds)">
+    <input type="number" [(ngModel)]="model().maxQueueWaitTime" min="0" />
+  </app-form-field>
+
+  <app-form-field label="Department">
+    <input type="text" [(ngModel)]="model().departmentName" />
+  </app-form-field>
+
+  <section class="dest-section">
+    @for (t of triggers; track t) {
+      <app-destination-editor
+        [trigger]="t"
+        [sourceType]="'call-queue'"
+        [value]="destinationFor(t)"
+        (valueChange)="onDestinationChange(t, $any($event))" />
+    }
+  </section>
+
+  <app-form-field label="Agents">
+    <app-row-list addLabel="Add Agent" (add)="onAddAgent()">
+      @for (a of model().agents; track $index) {
+        <div class="row-item">
+          <div class="row-fields">
+            <input type="text" placeholder="Name" [(ngModel)]="a.name" />
+            <input type="text" placeholder="Ext" [(ngModel)]="a.extensionNumber" />
+            <input type="text" placeholder="Skill Group" [(ngModel)]="a.skillGroup" />
+          </div>
+          <button type="button" class="row-remove" (click)="onRemoveAgent($index)" aria-label="Remove">&times;</button>
+        </div>
+      }
+    </app-row-list>
+  </app-form-field>
+</app-edit-shell>

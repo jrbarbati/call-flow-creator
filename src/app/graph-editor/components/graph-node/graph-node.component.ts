@@ -102,9 +102,7 @@ export class GraphNodeComponent {
 
   deleteNode(event: MouseEvent): void {
     event.stopPropagation();
-    const n = this.node();
-    const connected = this.service.connectedEdges(n.id);
-    this.service.execute(new DeleteNodeCommand(n, connected));
+    this.service.execute(new DeleteNodeCommand(this.node()));
   }
 
   private startDrag(event: MouseEvent): void {

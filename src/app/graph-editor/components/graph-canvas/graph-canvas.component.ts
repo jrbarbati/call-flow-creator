@@ -3,15 +3,31 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GraphEditorService } from '../../graph-editor.service';
-import { Vertex, Edge } from '../../models/graph.models';
-import { AddEdgeCommand } from '../../commands/add-edge.command';
+import { Vertex } from '../../models/graph.models';
+import { SetDestinationCommand, SetDestinationValue } from '../../commands/set-destination.command';
 import { GraphNodeComponent } from '../graph-node/graph-node.component';
 import { GraphEdgeComponent } from '../graph-edge/graph-edge.component';
+import { TriggerPickerComponent, TriggerOption } from '../trigger-picker/trigger-picker.component';
+import {
+  DestSlot, buildDestinationFromTarget, triggerColorFor, triggerLabelFor,
+} from '../../models/destination';
+import { DestinationTrigger, RingGroup } from '../../models/ringGroup';
+import { CallQueue } from '../../models/callQueue';
+import { Ivr } from '../../models/ivr';
+import { DidNumber } from '../../models/didNumber';
+import { SipTrunk } from '../../models/sipTrunk';
+
+interface PendingPicker {
+  source: Vertex;
+  target: Vertex;
+  options: TriggerOption[];
+  position: { x: number; y: number };
+}
 
 @Component({
   selector: 'app-graph-canvas',
   standalone: true,
-  imports: [CommonModule, GraphNodeComponent, GraphEdgeComponent],
+  imports: [CommonModule, GraphNodeComponent, GraphEdgeComponent, TriggerPickerComponent],
   templateUrl: './graph-canvas.component.html',
   styleUrl: './graph-canvas.component.scss',
 })
@@ -23,21 +39,21 @@ export class GraphCanvasComponent {
     return `translate(${x},${y}) scale(${scale})`;
   });
 
-  // Pan state
   private isPanning = false;
   private panStart = { x: 0, y: 0 };
   private transformAtPanStart = { x: 0, y: 0 };
 
-  // Edge drawing state
   protected readonly isDrawingEdge = signal(false);
   protected edgeSourceId: string | null = null;
   protected readonly liveEdgeStart = signal({ x: 0, y: 0 });
   protected readonly liveEdgeEnd = signal({ x: 0, y: 0 });
 
-  // Rubber-band state
   protected readonly isSelecting = signal(false);
   protected readonly selectionRect = signal({ x: 0, y: 0, width: 0, height: 0 });
   private selectionStart = { x: 0, y: 0 };
+
+  protected readonly pendingPicker = signal<PendingPicker | null>(null);
+  protected readonly deptMismatch = signal(false);
 
   @ViewChild('svgRoot') svgRoot!: ElementRef<SVGSVGElement>;
 
@@ -108,7 +124,7 @@ export class GraphCanvasComponent {
   }
 
   startPan(event: MouseEvent): void {
-    if ((event.target as Element).closest('.graph-node, .graph-edge, .zoom-controls')) return;
+    if ((event.target as Element).closest('.graph-node, .graph-edge, .zoom-controls, .trigger-picker')) return;
     this.isPanning = true;
     this.panStart = { x: event.clientX, y: event.clientY };
     const t = this.service.viewTransform();
@@ -128,47 +144,40 @@ export class GraphCanvasComponent {
 
   completeEdge(targetNode: Vertex): void {
     if (!this.isDrawingEdge() || !this.edgeSourceId) return;
-    if (this.edgeSourceId === targetNode.id) {
-      this.isDrawingEdge.set(false);
-      this.edgeSourceId = null;
-      return;
-    }
-
     const sourceNode = this.service.nodes().find(n => n.id === this.edgeSourceId);
+    if (!sourceNode || sourceNode.id === targetNode.id) { this.cancelDraw(); return; }
 
-    // Department rule: nodes can only connect within same department
-    const sourceDept = (sourceNode?.meta?.['department'] as string) ?? '';
-    const targetDept = (targetNode.meta?.['department'] as string) ?? '';
+    const sourceDept = nodeDept(sourceNode);
+    const targetDept = nodeDept(targetNode);
     if (sourceDept && targetDept && sourceDept !== targetDept) {
-      this.isDrawingEdge.set(false);
-      this.edgeSourceId = null;
+      this.flashDeptMismatch();
+      this.cancelDraw();
       return;
     }
 
-    let label: string | undefined;
+    const opts = this.optionsForSource(sourceNode);
+    if (opts.length === 0) { this.cancelDraw(); return; }
 
-    if (sourceNode?.type === 'ivr') {
-      const existingEdges = this.service.edges().filter(e => e.sourceId === this.edgeSourceId);
-      if (existingEdges.length >= 10) {
-        // IVR max 10 outputs (keys 0-9)
-        this.isDrawingEdge.set(false);
-        this.edgeSourceId = null;
-        return;
-      }
-      const usedKeys = new Set(existingEdges.map(e => e.label).filter(Boolean));
-      const allKeys = ['0','1','2','3','4','5','6','7','8','9'];
-      label = allKeys.find(k => !usedKeys.has(k));
-    }
+    this.pendingPicker.set({
+      source: sourceNode,
+      target: targetNode,
+      options: opts,
+      position: this.endpointToScreen(this.liveEdgeEnd()),
+    });
+    this.cancelDraw();
+  }
 
-    const edge: Edge = {
-      id: crypto.randomUUID(),
-      sourceId: this.edgeSourceId,
-      targetId: targetNode.id,
-      ...(label ? { label } : {}),
-    };
-    this.service.execute(new AddEdgeCommand(edge));
-    this.isDrawingEdge.set(false);
-    this.edgeSourceId = null;
+  onTriggerPicked(optionValue: string): void {
+    const ctx = this.pendingPicker();
+    if (!ctx) return;
+    this.pendingPicker.set(null);
+    const slot = parseSlotValue(optionValue);
+    const next = this.buildSetValue(slot, ctx.target);
+    this.service.execute(new SetDestinationCommand(ctx.source.id, slot, next));
+  }
+
+  onTriggerCancel(): void {
+    this.pendingPicker.set(null);
   }
 
   zoomIn(): void {
@@ -209,6 +218,103 @@ export class GraphCanvasComponent {
     });
   }
 
+  // ---------------------------------------------------------------------
+
+  private cancelDraw(): void {
+    this.isDrawingEdge.set(false);
+    this.edgeSourceId = null;
+  }
+
+  private flashDeptMismatch(): void {
+    this.deptMismatch.set(true);
+    setTimeout(() => this.deptMismatch.set(false), 1500);
+  }
+
+  private optionsForSource(n: Vertex): TriggerOption[] {
+    switch (n.type) {
+      case 'ring-group':
+      case 'call-queue': return this.rgCqOptions(n);
+      case 'ivr':        return this.ivrOptions(n);
+      case 'did':        return this.didOptions(n);
+      case 'sip-trunk':  return this.sipTrunkOptions(n);
+      default: return [];
+    }
+  }
+
+  private rgCqOptions(n: Vertex): TriggerOption[] {
+    const data = n.data as RingGroup | CallQueue;
+    const usedTriggers = new Set(this.usedDestinationTriggers([data.destinationNoAnswer, data.destinationOfficeClosed, data.destinationBreak, data.destinationHoliday]));
+    return this.triggerOptions([DestinationTrigger.NO_ANSWER, DestinationTrigger.OFFICE_CLOSED, DestinationTrigger.BREAK, DestinationTrigger.HOLIDAY], n.type, usedTriggers);
+  }
+
+  private ivrOptions(n: Vertex): TriggerOption[] {
+    const ivr = n.data as Ivr;
+    const usedTriggers = new Set(this.usedDestinationTriggers([ivr.destinationOfficeClosed, ivr.destinationBreak, ivr.destinationHoliday]));
+    const dest = this.triggerOptions([DestinationTrigger.OFFICE_CLOSED, DestinationTrigger.BREAK, DestinationTrigger.HOLIDAY], n.type, usedTriggers);
+    const usedDigits = new Set((ivr.forwards ?? []).map(f => f.input));
+    const forwards: TriggerOption[] = ['0','1','2','3','4','5','6','7','8','9'].map(d => ({
+      value: `fwd:${d}`, label: `Key ${d}`, color: triggerColorFor('FORWARD'),
+      group: 'forwards', inUse: usedDigits.has(d),
+    }));
+    const fallbacks: TriggerOption[] = [
+      { value: 'timeout', label: 'Timeout', color: triggerColorFor('TIMEOUT'),
+        group: 'fallbacks', inUse: !!ivr.timeoutDestination },
+      { value: 'invalidkey', label: 'Invalid Key', color: triggerColorFor('INVALID_KEY'),
+        group: 'fallbacks', inUse: !!ivr.invalidKeyDestination },
+    ];
+    return [...dest, ...forwards, ...fallbacks];
+  }
+
+  private didOptions(n: Vertex): TriggerOption[] {
+    const d = n.data as DidNumber;
+    const usedTriggers = new Set(this.usedDestinationTriggers([d.destinationOfficeHours, d.destinationOfficeClosed, d.destinationHoliday]));
+    return this.triggerOptions([DestinationTrigger.DEFAULT_ROUTE, DestinationTrigger.OFFICE_CLOSED, DestinationTrigger.HOLIDAY], n.type, usedTriggers);
+  }
+
+  private sipTrunkOptions(n: Vertex): TriggerOption[] {
+    const t = n.data as SipTrunk;
+    const used = new Set(this.usedDestinationTriggers([t.defaultRoute]));
+    return this.triggerOptions([DestinationTrigger.DEFAULT_ROUTE], n.type, used);
+  }
+
+  private triggerOptions(triggers: DestinationTrigger[], sourceType: Vertex['type'], used: Set<string>): TriggerOption[] {
+    return triggers.map(t => ({
+      value: `dest:${t}`,
+      label: triggerLabelFor(sourceType, t),
+      color: triggerColorFor(t),
+      group: 'destinations',
+      inUse: used.has(t),
+    }));
+  }
+
+  private usedDestinationTriggers(dests: Array<{ trigger: DestinationTrigger; toValue: string | null } | undefined>): string[] {
+    return dests.filter(d => d && d.toValue && d.toValue !== 'None').map(d => d!.trigger);
+  }
+
+  private buildSetValue(slot: DestSlot, target: Vertex): SetDestinationValue {
+    if (slot.kind === 'destination') {
+      const fields = buildDestinationFromTarget(target, slot.trigger);
+      return { kind: 'fields', fields };
+    }
+    if (slot.kind === 'forward') {
+      const destString = legacyStringFor(target);
+      return { kind: 'forward-destination', destination: destString, forwardType: forwardTypeFor(target) };
+    }
+    if (slot.kind === 'timeout') {
+      return { kind: 'timeout-string', value: legacyStringFor(target) };
+    }
+    return { kind: 'invalidkey-string', value: legacyStringFor(target) };
+  }
+
+  private endpointToScreen(canvasPoint: { x: number; y: number }): { x: number; y: number } {
+    const { x, y, scale } = this.service.viewTransform();
+    const host = this.svgRoot?.nativeElement.parentElement;
+    const rect = host?.getBoundingClientRect();
+    const offsetX = rect?.left ?? 0;
+    const offsetY = rect?.top ?? 0;
+    return { x: canvasPoint.x * scale + x + offsetX, y: canvasPoint.y * scale + y + offsetY };
+  }
+
   private svgPoint(event: MouseEvent): { x: number; y: number } {
     if (!this.svgRoot?.nativeElement) return { x: 0, y: 0 };
     const rect = this.svgRoot.nativeElement.getBoundingClientRect();
@@ -219,12 +325,7 @@ export class GraphCanvasComponent {
   }
 
   private canvasPoint(event: MouseEvent): { x: number; y: number } {
-    if (!this.svgRoot?.nativeElement) return { x: 0, y: 0 };
-    const rect = this.svgRoot.nativeElement.getBoundingClientRect();
-    return this.service.screenToCanvas(
-      event.clientX - rect.left,
-      event.clientY - rect.top
-    );
+    return this.svgPoint(event);
   }
 
   private applyRubberBandSelection(): void {
@@ -242,5 +343,49 @@ export class GraphCanvasComponent {
       }
     }
     this.service.selectedIds.set(selected);
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+function parseSlotValue(s: string): DestSlot {
+  if (s === 'timeout') return { kind: 'timeout' };
+  if (s === 'invalidkey') return { kind: 'invalidkey' };
+  const [kind, key] = s.split(':');
+  if (kind === 'fwd') return { kind: 'forward', digit: key };
+  return { kind: 'destination', trigger: key as DestinationTrigger };
+}
+
+function nodeDept(n: Vertex): string {
+  const d = n.data as { departmentName?: string | null } | undefined;
+  return d?.departmentName ?? '';
+}
+
+function legacyStringFor(target: Vertex): string {
+  const data: any = target.data ?? {};
+  switch (target.type) {
+    case 'extension':       return `Extension:${data.num ?? ''}`;
+    case 'ring-group':
+    case 'call-queue':
+    case 'ivr':             return `Extension:${data.extensionNumber ?? ''}`;
+    case 'voicemail':       return `VoiceMail:${data.extensionNumber ?? ''}`;
+    case 'call-processing-script': return `VoiceApp:${data.name ?? ''}`;
+    case 'external-number': return `External:${data.number ?? ''}`;
+    case 'end-call':        return 'None';
+    case 'accept-anyway':   return 'ProceedWithNoExceptions';
+    default: return '';
+  }
+}
+
+function forwardTypeFor(target: Vertex): string {
+  switch (target.type) {
+    case 'extension':       return 'extension';
+    case 'ring-group':      return 'ringgroup';
+    case 'call-queue':      return 'queue';
+    case 'ivr':             return 'ivr';
+    case 'voicemail':       return 'voicemail';
+    case 'call-processing-script': return 'voiceapp';
+    case 'external-number': return 'external';
+    default: return 'extension';
   }
 }

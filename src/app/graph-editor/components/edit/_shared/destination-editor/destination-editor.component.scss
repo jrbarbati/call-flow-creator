@@ -1,0 +1,44 @@
+.dest-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--palette-item-bg);
+  border: 1px solid var(--palette-item-border);
+  border-radius: 6px;
+}
+
+.dest-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dest-editor-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dest-editor-trigger {
+  font-family: var(--palette-label-font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--node-label-color);
+  text-transform: uppercase;
+}
+
+.dest-editor-prompt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--node-label-color);
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+}

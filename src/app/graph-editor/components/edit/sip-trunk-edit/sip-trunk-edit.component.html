@@ -1,0 +1,52 @@
+<app-edit-shell title="Edit SIP Trunk" (save)="onSave()" (cancel)="onCancel()">
+  <app-form-field label="Name">
+    <input type="text" [(ngModel)]="model().name" />
+  </app-form-field>
+
+  <app-form-field label="Host">
+    <input type="text" [(ngModel)]="model().host" />
+  </app-form-field>
+
+  <app-form-field label="Port">
+    <input type="number" [(ngModel)]="model().port" min="1" max="65535" />
+  </app-form-field>
+
+  <app-form-field label="Proxy Host">
+    <input type="text"
+      [ngModel]="model().proxyHost ?? ''"
+      (ngModelChange)="model().proxyHost = $event || null" />
+  </app-form-field>
+
+  <app-form-field label="Proxy Port">
+    <input type="number"
+      [ngModel]="model().proxyPort ?? 0"
+      (ngModelChange)="model().proxyPort = $event || null"
+      min="0" max="65535" />
+  </app-form-field>
+
+  <app-form-field label="Simultaneous Calls">
+    <input type="number" [(ngModel)]="model().simCalls" min="1" />
+  </app-form-field>
+
+  <app-form-field label="Inbound Calls">
+    <input type="checkbox" [(ngModel)]="model().enableInboundCalls" />
+  </app-form-field>
+
+  <app-form-field label="Outbound Calls">
+    <input type="checkbox" [(ngModel)]="model().enableOutboundCalls" />
+  </app-form-field>
+
+  <app-form-field label="SMS Enabled">
+    <input type="checkbox" [(ngModel)]="model().smsEnabled" />
+  </app-form-field>
+
+  <section class="dest-section">
+    @for (t of triggers; track t) {
+      <app-destination-editor
+        [trigger]="t"
+        [sourceType]="'sip-trunk'"
+        [value]="destinationFor(t)"
+        (valueChange)="onDestinationChange(t, $any($event))" />
+    }
+  </section>
+</app-edit-shell>

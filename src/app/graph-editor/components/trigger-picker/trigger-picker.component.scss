@@ -1,0 +1,70 @@
+:host { display: contents; }
+
+.trigger-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: transparent;
+}
+
+.trigger-picker {
+  position: absolute;
+  z-index: 100;
+  min-width: 220px;
+  max-width: 280px;
+  background: #1f232b;
+  border: 1px solid #3a3f4a;
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  color: #e8eaee;
+  font-size: 13px;
+}
+
+.picker-group + .picker-group {
+  border-top: 1px solid #2c303a;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.picker-group-label {
+  display: block;
+  padding: 4px 8px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: #8a90a0;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  font: inherit;
+}
+.picker-option:hover { background: #2c303a; }
+.picker-option.in-use { opacity: 0.85; }
+
+.picker-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.picker-label { flex: 1; }
+
+.picker-replace {
+  font-size: 10px;
+  color: #ef4444;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

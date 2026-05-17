@@ -1,11 +1,29 @@
 <aside class="palette">
-  <!-- Components section -->
+  <!-- Call Flow section -->
   <div class="palette-section">
     <div class="palette-section-header">
-      <span class="palette-header-text">3CX ASSETS</span>
+      <span class="palette-header-text">CALL FLOW</span>
     </div>
     <div class="palette-items">
-      @for (item of componentTypes; track item.type) {
+      @for (item of callFlowTypes; track item.type) {
+        <div class="palette-item component-item"
+             [attr.data-type]="item.type"
+             draggable="true"
+             (dragstart)="onComponentDragStart($event, item.type)">
+          <span class="palette-color-dot" [style.background]="item.color"></span>
+          <span class="palette-item-label">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Destinations section -->
+  <div class="palette-section">
+    <div class="palette-section-header">
+      <span class="palette-header-text">DESTINATIONS</span>
+    </div>
+    <div class="palette-items">
+      @for (item of destinationTypes; track item.type) {
         <div class="palette-item component-item"
              [attr.data-type]="item.type"
              draggable="true"

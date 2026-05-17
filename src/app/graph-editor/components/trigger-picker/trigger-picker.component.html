@@ -1,0 +1,24 @@
+<div class="trigger-picker-backdrop" (mousedown)="onBackdrop($event)"></div>
+<div class="trigger-picker"
+     [style.left.px]="position().x"
+     [style.top.px]="position().y"
+     (mousedown)="$event.stopPropagation()">
+  @for (group of groupOrder; track group) {
+    @let opts = optionsFor(group);
+    @if (opts.length > 0) {
+      <div class="picker-group">
+        <span class="picker-group-label">{{ groupLabels[group] }}</span>
+        @for (opt of opts; track opt.value) {
+          <button type="button"
+                  class="picker-option"
+                  [class.in-use]="opt.inUse"
+                  (click)="onPick(opt)">
+            <span class="picker-dot" [style.background]="opt.color"></span>
+            <span class="picker-label">{{ opt.label }}</span>
+            @if (opt.inUse) { <span class="picker-replace">replace</span> }
+          </button>
+        }
+      </div>
+    }
+  }
+</div>
